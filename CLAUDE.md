@@ -77,15 +77,12 @@ Better Auth handles all auth. Key details:
 - Agents are created by the admin (sign-up is disabled in Better Auth config)
 - To seed a user manually, use `hashPassword` from `better-auth/crypto` and `generateId` from `better-auth` — run scripts from `server/` so packages resolve correctly
 
-## E2E Testing (Playwright)
+## E2E Testing
 
-- Config: `playwright.config.ts` at root — runs Chromium, loads `server/.env.test`, starts both server and client
-- Tests live in `e2e/`
-- Test database: `helpdesk_test` (separate from dev `helpdesk`)
-- Global setup: `e2e/global-setup.ts` → runs migrations → runs `server/src/reset-test-db.ts` (clears DB, seeds admin + agent)
-- Test credentials: `admin@example.com` / `password123` and `agent@example.com` / `password123`
-- Scripts: `bun run test:e2e` (headless), `bun run test:e2e:ui` (interactive), `bun run test:e2e:report`
-- **Important**: DB reset/seed scripts must live in `server/src/` so bun can resolve `better-auth` and Prisma packages
+Use the `playwright-e2e-writer` agent for all Playwright e2e test writing. Invoke it whenever:
+- A new feature or user flow needs test coverage
+- An existing feature is modified and tests need updating
+- Auth flows, role-based access, or CRUD operations need verification
 
 ## Notes
 - Vite proxies `/api/*` requests to `http://localhost:3000` — always prefix API calls with `/api`

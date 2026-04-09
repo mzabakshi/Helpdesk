@@ -52,13 +52,21 @@ Better Auth handles all auth. Key details:
 - **Server config**: `server/src/auth.ts` — Prisma adapter, email/password enabled, **sign-up disabled** (only admin can create agents)
 - **User roles**: `role` field on the user (`admin` | `agent`), set server-side only (`input: false`), defaults to `agent`
 - **Auth routes**: Better Auth mounts at `/api/auth/*` via `toNodeHandler(auth)` in `server/src/index.ts`
-- **Client**: `client/src/lib/auth-client.ts` exports `authClient` (created with `createAuthClient()`)
+- **Client**: `client/src/lib/auth-client.ts` exports `authClient` (created with `createAuthClient()` + `inferAdditionalFields<typeof auth>()` plugin for typed `role` field)
   - Sign in: `authClient.signIn.email({ email, password })`
-  - Session: `authClient.useSession()` React hook
+  - Session: `authClient.useSession()` React hook — `session.user.role` is typed as `"admin" | "agent"`
   - Sign out: `authClient.signOut()`
-- **Route protection (frontend)**: `ProtectedLayout` component checks `authClient.useSession()` and redirects to `/login` if no session
+- **Route protection (frontend)**:
+  - `ProtectedLayout` — redirects to `/login` if no session
+  - `AdminLayout` — redirects to `/login` if no session, redirects to `/` if role is not `admin`
 - **Route protection (backend)**: `requireAuth` middleware in `server/src/middleware/requireAuth.ts` — calls `auth.api.getSession()` and attaches session to `req.session`; returns 401 if missing
 - **CORS**: Server allows `http://localhost:5173` with `credentials: true`; `TRUSTED_ORIGINS` env var controls this in production
+
+## User Management
+
+- Admin user is seeded via `server/src/seed.ts` (requires `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` env vars)
+- Agents are created by the admin (sign-up is disabled in Better Auth config)
+- To seed a user manually, run a `bun -e` script in `server/` using `hashPassword` from `better-auth/crypto` and `generateId` from `better-auth`
 
 ## Notes
 - Vite proxies `/api/*` requests to `http://localhost:3000` — always prefix API calls with `/api`

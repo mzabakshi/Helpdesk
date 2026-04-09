@@ -59,14 +59,33 @@ Better Auth handles all auth. Key details:
 - **Route protection (frontend)**:
   - `ProtectedLayout` — redirects to `/login` if no session
   - `AdminLayout` — redirects to `/login` if no session, redirects to `/` if role is not `admin`
-- **Route protection (backend)**: `requireAuth` middleware in `server/src/middleware/requireAuth.ts` — calls `auth.api.getSession()` and attaches session to `req.session`; returns 401 if missing
-- **CORS**: Server allows `http://localhost:5173` with `credentials: true`; `TRUSTED_ORIGINS` env var controls this in production
+- **Route protection (backend)**:
+  - `requireAuth` — `server/src/middleware/requireAuth.ts`; validates session via `auth.api.getSession()`, attaches to `req.session`; returns 401 if missing
+  - `requireAdmin` — `server/src/middleware/requireAdmin.ts`; returns 403 if `req.session.user.role !== "admin"`; always apply after `requireAuth`
+- **CORS**: `TRUSTED_ORIGINS` env var controls allowed origins in both `index.ts` and `auth.ts`; supports comma-separated multiple origins (e.g. `https://app.example.com,https://staging.example.com`)
+
+## Security
+
+- `helmet` is applied globally for HTTP security headers
+- Rate limiting (`express-rate-limit`) is **production-only** (`NODE_ENV === "production"`):
+  - `/api/*` — 200 requests per 15 minutes
+  - `/api/auth/sign-in` — 20 requests per 15 minutes
 
 ## User Management
 
 - Admin user is seeded via `server/src/seed.ts` (requires `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` env vars)
 - Agents are created by the admin (sign-up is disabled in Better Auth config)
-- To seed a user manually, run a `bun -e` script in `server/` using `hashPassword` from `better-auth/crypto` and `generateId` from `better-auth`
+- To seed a user manually, use `hashPassword` from `better-auth/crypto` and `generateId` from `better-auth` — run scripts from `server/` so packages resolve correctly
+
+## E2E Testing (Playwright)
+
+- Config: `playwright.config.ts` at root — runs Chromium, loads `server/.env.test`, starts both server and client
+- Tests live in `e2e/`
+- Test database: `helpdesk_test` (separate from dev `helpdesk`)
+- Global setup: `e2e/global-setup.ts` → runs migrations → runs `server/src/reset-test-db.ts` (clears DB, seeds admin + agent)
+- Test credentials: `admin@example.com` / `password123` and `agent@example.com` / `password123`
+- Scripts: `bun run test:e2e` (headless), `bun run test:e2e:ui` (interactive), `bun run test:e2e:report`
+- **Important**: DB reset/seed scripts must live in `server/src/` so bun can resolve `better-auth` and Prisma packages
 
 ## Notes
 - Vite proxies `/api/*` requests to `http://localhost:3000` — always prefix API calls with `/api`

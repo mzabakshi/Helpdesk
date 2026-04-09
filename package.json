@@ -1,5 +1,14 @@
 {
   "name": "helpdesk",
   "private": true,
-  "workspaces": ["client", "server"]
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "test:e2e": "bunx playwright test",
+    "test:e2e:ui": "bunx playwright test --ui",
+    "test:e2e:report": "bunx playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.5.2"
+  }
 }

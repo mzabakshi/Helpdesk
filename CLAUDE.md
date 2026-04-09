@@ -5,10 +5,10 @@
 A ticket management system that uses AI to classify, respond to, and route support tickets. See `project-scope.md` for full requirements and `implementation-plan.md` for phased task breakdown.
 
 ## Tech Stack
-- **Frontend**: React + TypeScript, Tailwind CSS, React Router (in `client/`)
+- **Frontend**: React + TypeScript, Tailwind CSS v4, shadcn/ui, React Router v7 (in `client/`)
 - **Backend**: Node.js + Express + TypeScript (in `server/`)
 - **Database**: PostgreSQL via Prisma ORM
-- **Auth**: Database sessions
+- **Auth**: Better Auth (email/password, database sessions)
 - **AI**: Claude API (Anthropic)
 - **Email**: SendGrid
 - **Runtime/Package Manager**: Bun
@@ -39,6 +39,26 @@ The client proxies `/api/*` requests to the server via Vite config.
 - Use bun as the runtime and package manager (not npm/yarn)
 - Use TypeScript throughout
 - Use context7 MCP server to fetch up-to-date documentation for libraries
+- Use shadcn/ui components for all UI — add new components with `bunx shadcn@latest add <component>`
+- shadcn components live in `client/src/components/ui/`
+- Use the `@/*` path alias for imports (maps to `client/src/`)
+- Tailwind v4 is configured via `@tailwindcss/vite` plugin — no `tailwind.config.js` file
+- Use shadcn semantic color tokens (e.g. `bg-muted`, `text-destructive`) rather than raw Tailwind colors
+
+## Authentication
+
+Better Auth handles all auth. Key details:
+
+- **Server config**: `server/src/auth.ts` — Prisma adapter, email/password enabled, **sign-up disabled** (only admin can create agents)
+- **User roles**: `role` field on the user (`admin` | `agent`), set server-side only (`input: false`), defaults to `agent`
+- **Auth routes**: Better Auth mounts at `/api/auth/*` via `toNodeHandler(auth)` in `server/src/index.ts`
+- **Client**: `client/src/lib/auth-client.ts` exports `authClient` (created with `createAuthClient()`)
+  - Sign in: `authClient.signIn.email({ email, password })`
+  - Session: `authClient.useSession()` React hook
+  - Sign out: `authClient.signOut()`
+- **Route protection (frontend)**: `ProtectedLayout` component checks `authClient.useSession()` and redirects to `/login` if no session
+- **Route protection (backend)**: `requireAuth` middleware in `server/src/middleware/requireAuth.ts` — calls `auth.api.getSession()` and attaches session to `req.session`; returns 401 if missing
+- **CORS**: Server allows `http://localhost:5173` with `credentials: true`; `TRUSTED_ORIGINS` env var controls this in production
 
 ## Notes
 - Vite proxies `/api/*` requests to `http://localhost:3000` — always prefix API calls with `/api`

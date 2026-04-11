@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -35,37 +37,30 @@ type User = {
 };
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "agent",
-  });
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "agent" });
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  async function fetchUsers() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/users", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load users");
-      setUsers(await res.json());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: users = [], isLoading, error } = useQuery<User[]>({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const { data } = await axios.get<User[]>("/api/users", { withCredentials: true });
+      return data;
+    },
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const createUser = useMutation({
+    mutationFn: (payload: typeof form) =>
+      axios.post<User>("/api/users", payload, { withCredentials: true }).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setOpen(false);
+    },
+    onError: (e) => {
+      setFormError(axios.isAxiosError(e) ? (e.response?.data?.error ?? "Failed to create user") : "Network error");
+    },
+  });
 
   function openDialog() {
     setForm({ name: "", email: "", password: "", role: "agent" });
@@ -73,29 +68,10 @@ export default function UsersPage() {
     setOpen(true);
   }
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
+  function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitting(true);
     setFormError(null);
-    try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setFormError(data.error ?? "Failed to create user");
-        return;
-      }
-      setUsers((prev) => [data, ...prev]);
-      setOpen(false);
-    } catch {
-      setFormError("Network error");
-    } finally {
-      setSubmitting(false);
-    }
+    createUser.mutate(form);
   }
 
   return (
@@ -105,10 +81,10 @@ export default function UsersPage() {
         <Button onClick={openDialog}>Add User</Button>
       </div>
 
-      {loading && <p className="text-muted-foreground">Loading...</p>}
-      {error && <p className="text-destructive">{error}</p>}
+      {isLoading && <p className="text-muted-foreground">Loading...</p>}
+      {error && <p className="text-destructive">{axios.isAxiosError(error) ? (error.response?.data?.error ?? error.message) : "Failed to load users"}</p>}
 
-      {!loading && !error && (
+      {!isLoading && !error && (
         <Table>
           <TableHeader>
             <TableRow>
@@ -199,8 +175,8 @@ export default function UsersPage() {
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Creating..." : "Create"}
+              <Button type="submit" disabled={createUser.isPending}>
+                {createUser.isPending ? "Creating..." : "Create"}
               </Button>
             </DialogFooter>
           </form>

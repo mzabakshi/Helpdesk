@@ -5,7 +5,7 @@
 A ticket management system that uses AI to classify, respond to, and route support tickets. See `project-scope.md` for full requirements and `implementation-plan.md` for phased task breakdown.
 
 ## Tech Stack
-- **Frontend**: React + TypeScript, Tailwind CSS v4, shadcn/ui, React Router v7 (in `client/`)
+- **Frontend**: React + TypeScript, Tailwind CSS v4, shadcn/ui, React Router v7, Axios, TanStack Query (in `client/`)
 - **Backend**: Node.js + Express + TypeScript (in `server/`)
 - **Database**: PostgreSQL via Prisma ORM
 - **Auth**: Better Auth (email/password, database sessions)
@@ -44,6 +44,8 @@ The client proxies `/api/*` requests to the server via Vite config.
 - Use the `@/*` path alias for imports (maps to `client/src/`)
 - Tailwind v4 is configured via `@tailwindcss/vite` plugin — no `tailwind.config.js` file
 - Use shadcn semantic color tokens (e.g. `bg-muted`, `text-destructive`) rather than raw Tailwind colors
+- Use **Axios** for all HTTP requests (never the native `fetch` API)
+- Use **TanStack Query** (`useQuery`, `useMutation`) for all server state — data fetching, caching, and mutations; `QueryClientProvider` is set up in `client/src/main.tsx`
 
 ## Authentication
 

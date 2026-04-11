@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -81,8 +82,15 @@ export default function UsersPage() {
         <Button onClick={openDialog}>Add User</Button>
       </div>
 
-      {isLoading && <p className="text-muted-foreground">Loading...</p>}
       {error && <p className="text-destructive">{axios.isAxiosError(error) ? (error.response?.data?.error ?? error.message) : "Failed to load users"}</p>}
+
+      {isLoading && (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-md" />
+          ))}
+        </div>
+      )}
 
       {!isLoading && !error && (
         <Table>

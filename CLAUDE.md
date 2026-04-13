@@ -18,7 +18,8 @@ A ticket management system that uses AI to classify, respond to, and route suppo
 ```
 helpdesk/
 ├── client/       # React frontend (Vite, port 5173)
-└── server/       # Express backend (port 3000)
+├── server/       # Express backend (port 3000)
+└── core/         # Shared code (Zod schemas, types) — imported by both client and server
 ```
 
 ## Running the Project
@@ -46,6 +47,8 @@ The client proxies `/api/*` requests to the server via Vite config.
 - Use shadcn semantic color tokens (e.g. `bg-muted`, `text-destructive`) rather than raw Tailwind colors
 - Use **Axios** for all HTTP requests (never the native `fetch` API)
 - Use **TanStack Query** (`useQuery`, `useMutation`) for all server state — data fetching, caching, and mutations; `QueryClientProvider` is set up in `client/src/main.tsx`
+- Use **React Hook Form** + **Zod** for all forms — wire up with `useForm<T>({ resolver: zodResolver(schema) })`, spread `{...register("field")}` onto inputs, and render `errors.field.message` per field; server-side errors go in a separate `useState` displayed below the fields
+- Define all **Zod schemas in `core/src/schemas/`** and export them from `core/src/index.ts` — import in both client and server via `import { ... } from "core"`; use the same schema for client-side RHF validation and server-side `safeParse` in route handlers
 
 ## Authentication
 

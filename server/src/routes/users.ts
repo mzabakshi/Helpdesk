@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { hashPassword } from "better-auth/crypto";
 import { generateId } from "better-auth";
+import { createUserSchema } from "core";
 import prisma from "../db";
 import { requireAuth } from "../middleware/requireAuth";
 import { requireAdmin } from "../middleware/requireAdmin";
@@ -20,12 +21,12 @@ router.get("/", async (_req, res) => {
 
 // POST /api/users
 router.post("/", async (req, res) => {
-  const { name, email, password, role } = req.body;
-
-  if (!name || !email || !password) {
-    res.status(400).json({ error: "name, email, and password are required" });
+  const parsed = createUserSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message });
     return;
   }
+  const { name, email, password } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -43,7 +44,7 @@ router.post("/", async (req, res) => {
       name,
       email,
       emailVerified: false,
-      role: role === "admin" ? "admin" : "agent",
+      role: "agent",
       createdAt: now,
       updatedAt: now,
       accounts: {

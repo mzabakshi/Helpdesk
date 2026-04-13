@@ -79,6 +79,18 @@ Better Auth handles all auth. Key details:
 - Agents are created by the admin (sign-up is disabled in Better Auth config)
 - To seed a user manually, use `hashPassword` from `better-auth/crypto` and `generateId` from `better-auth` — run scripts from `server/` so packages resolve correctly
 
+## Component Testing
+
+- **Stack**: Vitest + React Testing Library + jsdom
+- **Setup file**: `client/src/test/setup.ts` — imports `@testing-library/jest-dom` matchers
+- **Test files**: co-locate next to the component/page as `*.test.tsx`
+- **Query wrapper**: use `renderWithQuery` from `client/src/test/renderWithQuery.tsx` for any component that uses TanStack Query — it provides a fresh `QueryClient` with `retry: false` per test
+- **Mocking HTTP**: mock `axios` with `vi.mock("axios")` and `vi.mocked(axios, true)`; use `vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never)` to mock the type-predicate function
+- **Run commands** (from `client/`):
+  - `bun run test` — run all tests once
+  - `bun run test:components` — run all tests once with verbose per-test output
+  - `bun run test:watch` — run in watch mode
+
 ## E2E Testing
 
 Use the `playwright-e2e-writer` agent for all Playwright e2e test writing. Invoke it whenever:

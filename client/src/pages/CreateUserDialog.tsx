@@ -67,17 +67,17 @@ export default function CreateUserDialog({ open, onOpenChange }: Props) {
         <form onSubmit={handleSubmit(handleCreate)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
-            <Input id="name" {...register("name")} />
+            <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register("email")} />
+            <Input id="email" type="email" aria-invalid={!!errors.email} {...register("email")} />
             {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register("password")} />
+            <Input id="password" type="password" aria-invalid={!!errors.password} {...register("password")} />
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}

@@ -80,6 +80,34 @@ describe("UsersPage", () => {
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
   });
 
+  it("closes the dialog when clicking outside (overlay)", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Alice Admin"));
+    await userEvent.click(screen.getByRole("button", { name: /add user/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // Click on the Radix overlay backdrop (outside the dialog content) to dismiss
+    const overlay = document.querySelector("[data-radix-dialog-overlay]") as HTMLElement;
+    if (overlay) await userEvent.click(overlay);
+    else await userEvent.click(document.body);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("closes the dialog when the Escape key is pressed", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Alice Admin"));
+    await userEvent.click(screen.getByRole("button", { name: /add user/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
   it("closes the dialog when Cancel is clicked", async () => {
     mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
     renderPage();

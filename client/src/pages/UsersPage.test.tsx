@@ -146,6 +146,81 @@ describe("UsersPage", () => {
     );
   });
 
+  describe("edit dialog", () => {
+    async function openEditDialog() {
+      mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
+      renderPage();
+      await waitFor(() => screen.getByText("Alice Admin"));
+      await userEvent.click(screen.getByRole("button", { name: /edit alice admin/i }));
+    }
+
+    it("opens the Edit User dialog with the user's data pre-filled", async () => {
+      await openEditDialog();
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByLabelText("Name")).toHaveValue("Alice Admin");
+      expect(screen.getByLabelText("Email")).toHaveValue("alice@example.com");
+      expect(screen.getByLabelText("New Password")).toHaveValue("");
+    });
+
+    it("closes the edit dialog when Cancel is clicked", async () => {
+      await openEditDialog();
+      await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("closes the edit dialog when Escape is pressed", async () => {
+      await openEditDialog();
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it("patches the user and closes the dialog on success", async () => {
+      mockedAxios.patch = vi.fn().mockResolvedValue({ data: { ...USERS[0], name: "Alice Updated" } });
+      await openEditDialog();
+
+      await userEvent.clear(screen.getByLabelText("Name"));
+      await userEvent.type(screen.getByLabelText("Name"), "Alice Updated");
+      await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        "/api/users/1",
+        expect.objectContaining({ name: "Alice Updated", email: "alice@example.com" }),
+        expect.objectContaining({ withCredentials: true })
+      );
+    });
+
+    it("shows a server error when the patch fails", async () => {
+      const err = Object.assign(new Error("Conflict"), {
+        isAxiosError: true,
+        response: { data: { error: "A user with that email already exists" } },
+      });
+      mockedAxios.patch = vi.fn().mockRejectedValue(err);
+      vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never);
+      await openEditDialog();
+
+      await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+      await waitFor(() =>
+        expect(screen.getByText("A user with that email already exists")).toBeInTheDocument()
+      );
+    });
+
+    it("only one dialog is open at a time — Add User closes edit dialog", async () => {
+      await openEditDialog();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      // Close edit, then open create
+      await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+      await userEvent.click(screen.getByRole("button", { name: /add user/i }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByLabelText("Password")).toBeInTheDocument(); // create dialog has Password, not New Password
+    });
+  });
+
   it("shows a form error when creation fails", async () => {
     mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
     const err = Object.assign(new Error("Conflict"), {

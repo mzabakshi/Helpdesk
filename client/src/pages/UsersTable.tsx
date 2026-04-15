@@ -1,3 +1,4 @@
+import { Pencil } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -7,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type User = {
   id: string;
@@ -18,9 +20,10 @@ type User = {
 
 type Props = {
   users: User[];
+  onEdit: (user: User) => void;
 };
 
-export default function UsersTable({ users }: Props) {
+export default function UsersTable({ users, onEdit }: Props) {
   return (
     <Table>
       <TableHeader>
@@ -29,12 +32,13 @@ export default function UsersTable({ users }: Props) {
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
           <TableHead>Created</TableHead>
+          <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
         {users.length === 0 && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center text-muted-foreground">
+            <TableCell colSpan={5} className="text-center text-muted-foreground">
               No users found.
             </TableCell>
           </TableRow>
@@ -50,6 +54,17 @@ export default function UsersTable({ users }: Props) {
             </TableCell>
             <TableCell className="text-muted-foreground">
               {new Date(user.createdAt).toLocaleDateString()}
+            </TableCell>
+            <TableCell className="text-right">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Edit ${user.name}`}
+                onClick={() => onEdit(user)}
+                className="cursor-pointer"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
             </TableCell>
           </TableRow>
         ))}

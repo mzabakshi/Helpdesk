@@ -1,10 +1,14 @@
 import { Router } from "express";
 import { hashPassword } from "better-auth/crypto";
 import { generateId } from "better-auth";
-import { createUserSchema } from "core";
+import { createUserSchema, editUserSchema } from "core";
 import prisma from "../db";
 import { requireAuth } from "../middleware/requireAuth";
 import { requireAdmin } from "../middleware/requireAdmin";
+
+function firstIssue(error: { issues: { message: string }[] }) {
+  return error.issues[0].message;
+}
 
 const router = Router();
 
@@ -23,7 +27,7 @@ router.get("/", async (_req, res) => {
 router.post("/", async (req, res) => {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0].message });
+    res.status(400).json({ error: firstIssue(parsed.error) });
     return;
   }
   const { name, email, password } = parsed.data;
@@ -62,6 +66,48 @@ router.post("/", async (req, res) => {
   });
 
   res.status(201).json(user);
+});
+
+// PATCH /api/users/:id
+router.patch("/:id", async (req, res) => {
+  const parsed = editUserSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: firstIssue(parsed.error) });
+    return;
+  }
+  const { name, email, password } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!existing) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const emailTaken = await prisma.user.findFirst({
+    where: { email, NOT: { id: req.params.id } },
+  });
+  if (emailTaken) {
+    res.status(409).json({ error: "A user with that email already exists" });
+    return;
+  }
+
+  const now = new Date();
+
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { name, email, updatedAt: now },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  });
+
+  if (password && password.trim() !== "") {
+    const hashed = await hashPassword(password);
+    await prisma.account.updateMany({
+      where: { userId: req.params.id, providerId: "credential" },
+      data: { password: hashed, updatedAt: now },
+    });
+  }
+
+  res.json(user);
 });
 
 export default router;

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import CreateUserDialog from "./CreateUserDialog";
+import EditUserDialog from "./EditUserDialog";
 import UsersTable from "./UsersTable";
 
 type User = {
@@ -14,8 +15,10 @@ type User = {
   createdAt: string;
 };
 
+type DialogState = { mode: "create" } | { mode: "edit"; user: User } | null;
+
 export default function UsersPage() {
-  const [open, setOpen] = useState(false);
+  const [dialog, setDialog] = useState<DialogState>(null);
 
   const { data: users = [], isLoading, error } = useQuery<User[]>({
     queryKey: ["users"],
@@ -29,7 +32,7 @@ export default function UsersPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Users</h1>
-        <Button onClick={() => setOpen(true)}>Add User</Button>
+        <Button onClick={() => setDialog({ mode: "create" })}>Add User</Button>
       </div>
 
       {error && (
@@ -46,9 +49,19 @@ export default function UsersPage() {
         </div>
       )}
 
-      {!isLoading && !error && <UsersTable users={users} />}
+      {!isLoading && !error && (
+        <UsersTable users={users} onEdit={(user) => setDialog({ mode: "edit", user })} />
+      )}
 
-      <CreateUserDialog open={open} onOpenChange={setOpen} />
+      <CreateUserDialog
+        open={dialog?.mode === "create"}
+        onOpenChange={(isOpen) => { if (!isOpen) setDialog(null); }}
+      />
+      <EditUserDialog
+        user={dialog?.mode === "edit" ? dialog.user : null}
+        open={dialog?.mode === "edit"}
+        onOpenChange={(isOpen) => { if (!isOpen) setDialog(null); }}
+      />
     </div>
   );
 }

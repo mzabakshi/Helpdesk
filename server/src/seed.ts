@@ -44,4 +44,34 @@ await prisma.user.create({
 });
 
 console.log(`Admin user created: ${email}`);
+
+// Seed a default agent for local development / e2e tests
+const agentEmail = "agent@example.com";
+const existingAgent = await prisma.user.findUnique({ where: { email: agentEmail } });
+if (!existingAgent) {
+  const agentId = generateId();
+  await prisma.user.create({
+    data: {
+      id: agentId,
+      name: "Agent",
+      email: agentEmail,
+      emailVerified: true,
+      role: Role.agent,
+      createdAt: now,
+      updatedAt: now,
+      accounts: {
+        create: {
+          id: generateId(),
+          accountId: agentId,
+          providerId: "credential",
+          password: await hashPassword("password123"),
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+    },
+  });
+  console.log(`Agent user created: ${agentEmail}`);
+}
+
 await prisma.$disconnect();

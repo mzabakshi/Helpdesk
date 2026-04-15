@@ -1,0 +1,2 @@
+- [E2E test coverage map](coverage_map.md) — Which spec files exist and what each covers (auth, users CRUD)
+- [Playwright patterns](patterns.md) — Login helper, selector conventions, test isolation, config notes

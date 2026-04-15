@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { editUserSchema, type EditUserInput } from "core";
+import { editUserSchema, type EditUserInput, Role } from "core";
 import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,7 +19,7 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "agent";
+  role: Role;
   createdAt: string;
 };
 

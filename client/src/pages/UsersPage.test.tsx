@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axios from "axios";
+import { Role } from "core";
 import UsersPage from "./UsersPage";
 import { renderWithQuery } from "@/test/renderWithQuery";
 
@@ -9,8 +10,8 @@ vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
 
 const USERS = [
-  { id: "1", name: "Alice Admin", email: "alice@example.com", role: "admin", createdAt: "2024-01-01T00:00:00Z" },
-  { id: "2", name: "Bob Agent", email: "bob@example.com", role: "agent", createdAt: "2024-02-01T00:00:00Z" },
+  { id: "1", name: "Alice Admin", email: "alice@example.com", role: Role.Admin, createdAt: "2024-01-01T00:00:00Z" },
+  { id: "2", name: "Bob Agent", email: "bob@example.com", role: Role.Agent, createdAt: "2024-02-01T00:00:00Z" },
 ];
 
 function renderPage() {
@@ -121,7 +122,7 @@ describe("UsersPage", () => {
   });
 
   it("submits the form and refetches the list on success", async () => {
-    const newUser = { id: "3", name: "Carol", email: "carol@example.com", role: "agent", createdAt: "2024-03-01T00:00:00Z" };
+    const newUser = { id: "3", name: "Carol", email: "carol@example.com", role: Role.Agent, createdAt: "2024-03-01T00:00:00Z" };
     mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
     mockedAxios.post = vi.fn().mockResolvedValue({ data: newUser });
     renderPage();
@@ -218,6 +219,85 @@ describe("UsersPage", () => {
       await userEvent.click(screen.getByRole("button", { name: /add user/i }));
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(screen.getByLabelText("Password")).toBeInTheDocument(); // create dialog has Password, not New Password
+    });
+  });
+
+  describe("delete dialog", () => {
+    async function openDeleteDialog() {
+      mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
+      renderPage();
+      await waitFor(() => screen.getByText("Bob Agent"));
+      await userEvent.click(screen.getByRole("button", { name: /delete bob agent/i }));
+    }
+
+    it("opens the delete confirmation dialog when Delete is clicked for an agent", async () => {
+      await openDeleteDialog();
+      expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+      expect(screen.getByText(/are you sure you want to delete/i)).toBeInTheDocument();
+      expect(screen.getAllByText("Bob Agent").length).toBeGreaterThan(0);
+    });
+
+    it("does not render a Delete button for admin users", async () => {
+      mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
+      renderPage();
+      await waitFor(() => screen.getByText("Alice Admin"));
+      const deleteBtn = screen.queryByRole("button", { name: /delete alice admin/i });
+      // Button exists but is invisible (aria-label present but visually hidden)
+      expect(deleteBtn).toHaveClass("invisible");
+    });
+
+    it("closes the dialog when Cancel is clicked", async () => {
+      await openDeleteDialog();
+      await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    });
+
+    it("sends DELETE request and closes dialog on confirm", async () => {
+      mockedAxios.delete = vi.fn().mockResolvedValue({});
+      mockedAxios.get = vi.fn().mockResolvedValue({ data: USERS });
+      await openDeleteDialog();
+
+      mockedAxios.get = vi.fn().mockResolvedValue({ data: [USERS[0]] });
+      await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+      expect(mockedAxios.delete).toHaveBeenCalledWith(
+        "/api/users/2",
+        expect.objectContaining({ withCredentials: true })
+      );
+    });
+
+    it("shows a server error when deletion fails", async () => {
+      const err = Object.assign(new Error("Forbidden"), {
+        isAxiosError: true,
+        response: { data: { error: "Admin users cannot be deleted." } },
+      });
+      mockedAxios.delete = vi.fn().mockRejectedValue(err);
+      vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never);
+      await openDeleteDialog();
+
+      await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Admin users cannot be deleted.")).toBeInTheDocument()
+      );
+      expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    });
+
+    it("clears the error and closes when Cancel is clicked after a failed delete", async () => {
+      const err = Object.assign(new Error("Forbidden"), {
+        isAxiosError: true,
+        response: { data: { error: "Admin users cannot be deleted." } },
+      });
+      mockedAxios.delete = vi.fn().mockRejectedValue(err);
+      vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never);
+      await openDeleteDialog();
+
+      await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+      await waitFor(() => screen.getByText("Admin users cannot be deleted."));
+
+      await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     });
   });
 

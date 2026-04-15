@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from "react-router";
+import { Role } from "core";
 import { authClient } from "../lib/auth-client";
 import NavBar from "./NavBar";
 
@@ -17,7 +18,7 @@ export default function AdminLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  if (session.user.role !== "admin") {
+  if (session.user.role !== Role.Admin) {
     return <Navigate to="/" replace />;
   }
 

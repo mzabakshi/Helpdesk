@@ -94,6 +94,35 @@ Better Auth handles all auth. Key details:
   - `bun run test:components` — run all tests once with verbose per-test output
   - `bun run test:watch` — run in watch mode
 
+## Role Enum
+
+Always use the `Role` enum from `core` instead of magic strings for user roles:
+
+```ts
+import { Role } from "core";
+
+// ✅ correct
+if (user.role === Role.Admin) { ... }
+const role: Role = Role.Agent;
+
+// ❌ never use magic strings
+if (user.role === "admin") { ... }
+```
+
+- The enum is defined in `core/src/schemas/user.ts` and exported from `core/src/index.ts`
+- Use `Role` for type annotations (e.g. `role: Role`) as well as comparisons
+- This applies in all client code, shared types, and tests
+
+## Unit Testing Requirements
+
+**Every new feature must include unit tests.** When implementing a new feature or modifying an existing one:
+
+- Co-locate the test file next to the component as `*.test.tsx`
+- Cover: happy path, error states, loading/pending states, edge cases, and dialog open/close behaviour
+- Use `renderWithQuery` from `@/test/renderWithQuery.tsx` for components that use TanStack Query
+- Mock `axios` with `vi.mock("axios")` and `vi.mocked(axios, true)`; use `vi.spyOn(axios, "isAxiosError")` to mock the type-predicate
+- Run `bun run test` from `client/` before marking a feature done — all tests must pass
+
 ## E2E Testing
 
 Use the `playwright-e2e-writer` agent for all Playwright e2e test writing. Invoke it whenever:

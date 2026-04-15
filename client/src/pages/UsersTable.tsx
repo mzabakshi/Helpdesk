@@ -1,4 +1,5 @@
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { Role } from "core";
 import {
   Table,
   TableBody,
@@ -14,16 +15,17 @@ type User = {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "agent";
+  role: Role;
   createdAt: string;
 };
 
 type Props = {
   users: User[];
   onEdit: (user: User) => void;
+  onDelete: (user: User) => void;
 };
 
-export default function UsersTable({ users, onEdit }: Props) {
+export default function UsersTable({ users, onEdit, onDelete }: Props) {
   return (
     <Table>
       <TableHeader>
@@ -48,14 +50,14 @@ export default function UsersTable({ users, onEdit }: Props) {
             <TableCell className="font-medium">{user.name}</TableCell>
             <TableCell>{user.email}</TableCell>
             <TableCell>
-              <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+              <Badge variant={user.role === Role.Admin ? "default" : "secondary"}>
                 {user.role}
               </Badge>
             </TableCell>
             <TableCell className="text-muted-foreground">
               {new Date(user.createdAt).toLocaleDateString()}
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell className="text-right space-x-1">
               <Button
                 variant="ghost"
                 size="icon"
@@ -64,6 +66,15 @@ export default function UsersTable({ users, onEdit }: Props) {
                 className="cursor-pointer"
               >
                 <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${user.name}`}
+                onClick={() => onDelete(user)}
+                className={`cursor-pointer text-destructive hover:text-destructive ${user.role === Role.Admin ? "invisible" : ""}`}
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </TableCell>
           </TableRow>

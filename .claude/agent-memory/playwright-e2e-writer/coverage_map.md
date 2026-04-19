@@ -19,5 +19,14 @@ type: project
 - Edit: click pencil button, change name, save, updated name in table
 - Delete: click trash button for agent row, confirm in AlertDialog, row removed
 
+`e2e/webhooks.spec.ts` covers (API-only, no browser):
+- Missing token → 401
+- Wrong token → 401
+- Wrong/missing token → no ticket created in DB (verified via test-only route)
+- Valid request with "Name <email>" from → 200, ticket fields parsed correctly
+- Plain email from (no angle brackets) → fromName and fromEmail both equal the email
+- Missing subject → defaults to "(no subject)"
+- Missing text → body is empty string
+
 **Why:** Track this so we don't duplicate coverage and know gaps at a glance.
 **How to apply:** Before writing new tests, check here first to avoid overlap.

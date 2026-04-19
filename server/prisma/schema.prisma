@@ -72,3 +72,29 @@ model Verification {
 
   @@map("verification")
 }
+
+enum TicketStatus {
+  open
+  resolved
+  closed
+}
+
+enum TicketCategory {
+  general_question
+  technical_issue
+  refund_request
+}
+
+model Ticket {
+  id        String         @id @default(cuid())
+  subject   String
+  body      String
+  fromEmail String
+  fromName  String
+  status    TicketStatus   @default(open)
+  category  TicketCategory @default(general_question)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("ticket")
+}

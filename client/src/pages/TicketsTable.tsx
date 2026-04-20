@@ -6,6 +6,7 @@ import {
   type SortingState,
   type OnChangeFn,
 } from "@tanstack/react-table";
+import AppLink from "@/components/AppLink";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { TicketStatus, TicketCategory } from "core";
 import {
@@ -53,7 +54,11 @@ const columns = [
   columnHelper.accessor("subject", {
     header: "Subject",
     enableSorting: true,
-    cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+    cell: (info) => (
+      <AppLink to={`/tickets/${info.row.original.id}`} className="font-medium">
+        {info.getValue()}
+      </AppLink>
+    ),
   }),
   columnHelper.accessor("fromName", {
     header: "From",

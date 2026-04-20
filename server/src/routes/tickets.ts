@@ -64,4 +64,18 @@ router.get("/", async (req, res) => {
   res.json({ data: tickets, total, page, pageSize });
 });
 
+// GET /api/tickets/:id
+router.get("/:id", async (req, res) => {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: req.params.id },
+  });
+
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  res.json(ticket);
+});
+
 export default router;

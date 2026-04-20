@@ -1,12 +1,24 @@
 import { useParams } from "react-router";
 import AppLink from "@/components/AppLink";
 import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TicketStatus, TicketCategory } from "core";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
+
+interface Agent {
+  id: string;
+  name: string;
+}
 
 interface Ticket {
   id: string;
@@ -16,6 +28,7 @@ interface Ticket {
   fromEmail: string;
   status: TicketStatus;
   category: TicketCategory;
+  assignedTo: Agent | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +47,7 @@ const categoryLabel: Record<TicketCategory, string> = {
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
 
   const { data: ticket, isLoading, error } = useQuery<Ticket>({
     queryKey: ["ticket", id],
@@ -44,6 +58,28 @@ export default function TicketDetailPage() {
       return data;
     },
   });
+
+  const { data: agents = [] } = useQuery<Agent[]>({
+    queryKey: ["agents"],
+    queryFn: async () => {
+      const { data } = await axios.get<Agent[]>("/api/agents", {
+        withCredentials: true,
+      });
+      return data;
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: (assignedToId: string | null) =>
+      axios.patch(`/api/tickets/${id}/assign`, { assignedToId }, { withCredentials: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+    },
+  });
+
+  function handleAssignChange(value: string) {
+    assignMutation.mutate(value === "unassigned" ? null : value);
+  }
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
@@ -87,6 +123,34 @@ export default function TicketDetailPage() {
               <Badge variant={statusVariant[ticket.status]}>{ticket.status}</Badge>
               <span className="text-muted-foreground">{categoryLabel[ticket.category]}</span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Assigned to</span>
+            <Select
+              value={ticket.assignedTo?.id ?? "unassigned"}
+              onValueChange={handleAssignChange}
+              disabled={assignMutation.isPending}
+            >
+              <SelectTrigger className="w-48 h-8 text-sm">
+                <SelectValue>{ticket.assignedTo?.name ?? "Unassigned"}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {assignMutation.isError && (
+              <span className="text-sm text-destructive">
+                {axios.isAxiosError(assignMutation.error)
+                  ? (assignMutation.error.response?.data?.error ?? assignMutation.error.message)
+                  : "Failed to assign"}
+              </span>
+            )}
           </div>
 
           <div className="rounded-md border p-4 bg-muted/40 whitespace-pre-wrap text-sm leading-relaxed">

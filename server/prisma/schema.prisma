@@ -23,8 +23,9 @@ model User {
   role          Role
   deletedAt     DateTime?
 
-  sessions Session[]
-  accounts Account[]
+  sessions        Session[]
+  accounts        Account[]
+  assignedTickets Ticket[]
 
   @@map("user")
 }
@@ -86,15 +87,17 @@ enum TicketCategory {
 }
 
 model Ticket {
-  id        String         @id @default(cuid())
-  subject   String
-  body      String
-  fromEmail String
-  fromName  String
-  status    TicketStatus   @default(open)
-  category  TicketCategory @default(general_question)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  subject      String
+  body         String
+  fromEmail    String
+  fromName     String
+  status       TicketStatus   @default(open)
+  category     TicketCategory @default(general_question)
+  assignedToId String?
+  assignedTo   User?          @relation(fields: [assignedToId], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@map("ticket")
 }

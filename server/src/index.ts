@@ -8,6 +8,7 @@ import { auth } from "./auth";
 import usersRouter from "./routes/users";
 import webhooksRouter from "./routes/webhooks";
 import ticketsRouter from "./routes/tickets";
+import agentsRouter from "./routes/agents";
 import prisma from "./db";
 
 const app = express();
@@ -45,6 +46,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/users", usersRouter);
+app.use("/api/agents", agentsRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/webhooks", webhooksRouter);
 

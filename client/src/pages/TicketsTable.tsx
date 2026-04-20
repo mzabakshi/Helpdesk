@@ -1,3 +1,12 @@
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type SortingState,
+  type OnChangeFn,
+} from "@tanstack/react-table";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { TicketStatus, TicketCategory } from "core";
 import {
   Table,
@@ -8,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface Ticket {
   id: string;
@@ -21,6 +31,8 @@ interface Ticket {
 
 interface Props {
   tickets: Ticket[];
+  sorting: SortingState;
+  onSortingChange: OnChangeFn<SortingState>;
 }
 
 const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> = {
@@ -35,44 +47,110 @@ const categoryLabel: Record<TicketCategory, string> = {
   [TicketCategory.RefundRequest]: "Refund Request",
 };
 
-export default function TicketsTable({ tickets }: Props) {
+const columnHelper = createColumnHelper<Ticket>();
+
+const columns = [
+  columnHelper.accessor("subject", {
+    header: "Subject",
+    enableSorting: true,
+    cell: (info) => <span className="font-medium">{info.getValue()}</span>,
+  }),
+  columnHelper.accessor("fromName", {
+    header: "From",
+    enableSorting: true,
+    cell: (info) => (
+      <>
+        <span className="block">{info.getValue()}</span>
+        <span className="text-sm text-muted-foreground">{info.row.original.fromEmail}</span>
+      </>
+    ),
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    enableSorting: true,
+    cell: (info) => (
+      <Badge variant={statusVariant[info.getValue()]}>
+        {info.getValue()}
+      </Badge>
+    ),
+  }),
+  columnHelper.accessor("category", {
+    header: "Category",
+    enableSorting: true,
+    cell: (info) => (
+      <span className="text-muted-foreground">{categoryLabel[info.getValue()]}</span>
+    ),
+  }),
+  columnHelper.accessor("createdAt", {
+    header: "Received",
+    enableSorting: true,
+    cell: (info) => (
+      <span className="text-muted-foreground">
+        {new Date(info.getValue()).toLocaleDateString()}
+      </span>
+    ),
+  }),
+];
+
+export default function TicketsTable({ tickets, sorting, onSortingChange }: Props) {
+  const table = useReactTable({
+    data: tickets,
+    columns,
+    state: { sorting },
+    onSortingChange,
+    manualSorting: true,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <Table>
       <TableHeader>
-        <TableRow>
-          <TableHead>Subject</TableHead>
-          <TableHead>From</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Received</TableHead>
-        </TableRow>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => {
+              const sorted = header.column.getIsSorted();
+              return (
+                <TableHead key={header.id}>
+                  {header.column.getCanSort() ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-3 h-8"
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {sorted === "asc" ? (
+                        <ArrowUp className="ml-1 h-3 w-3" />
+                      ) : sorted === "desc" ? (
+                        <ArrowDown className="ml-1 h-3 w-3" />
+                      ) : (
+                        <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground" />
+                      )}
+                    </Button>
+                  ) : (
+                    flexRender(header.column.columnDef.header, header.getContext())
+                  )}
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        ))}
       </TableHeader>
       <TableBody>
-        {tickets.length === 0 && (
+        {table.getRowCount() === 0 && (
           <TableRow>
-            <TableCell colSpan={5} className="text-center text-muted-foreground">
+            <TableCell colSpan={columns.length} className="text-center text-muted-foreground">
               No tickets found.
             </TableCell>
           </TableRow>
         )}
-        {tickets.map((ticket) => (
-          <TableRow key={ticket.id}>
-            <TableCell className="font-medium">{ticket.subject}</TableCell>
-            <TableCell>
-              <span className="block">{ticket.fromName}</span>
-              <span className="text-sm text-muted-foreground">{ticket.fromEmail}</span>
-            </TableCell>
-            <TableCell>
-              <Badge variant={statusVariant[ticket.status]}>
-                {ticket.status}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {categoryLabel[ticket.category]}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {new Date(ticket.createdAt).toLocaleDateString()}
-            </TableCell>
+        {table.getRowModel().rows.map((row) => (
+          <TableRow key={row.id}>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
           </TableRow>
         ))}
       </TableBody>

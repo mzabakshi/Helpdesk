@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import axios from "axios";
 import { TicketStatus, TicketCategory } from "core";
 import TicketsPage from "./TicketsPage";
@@ -84,5 +85,58 @@ describe("TicketsPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText("Unauthorized")).toBeInTheDocument());
+  });
+
+  it("fetches with default sort params (createdAt desc)", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot access my account"));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      "/api/tickets",
+      expect.objectContaining({ params: { sortBy: "createdAt", order: "desc" } })
+    );
+  });
+
+  it("re-fetches with new sort params when a column header is clicked", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot access my account"));
+
+    // Click the Subject column header to sort ascending
+    await userEvent.click(screen.getByRole("button", { name: /subject/i }));
+
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "/api/tickets",
+        expect.objectContaining({ params: { sortBy: "subject", order: "asc" } })
+      )
+    );
+  });
+
+  it("switches sort column when a different header is clicked", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot access my account"));
+
+    // Click Subject → sort by subject asc
+    await userEvent.click(screen.getByRole("button", { name: /subject/i }));
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "/api/tickets",
+        expect.objectContaining({ params: { sortBy: "subject", order: "asc" } })
+      )
+    );
+
+    // Click From → sort by fromName asc
+    await userEvent.click(screen.getByRole("button", { name: /from/i }));
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "/api/tickets",
+        expect.objectContaining({ params: { sortBy: "fromName", order: "asc" } })
+      )
+    );
   });
 });

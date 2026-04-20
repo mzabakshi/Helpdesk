@@ -1,0 +1,152 @@
+import "dotenv/config";
+import prisma from "./db";
+
+const tickets = [
+  // General Questions
+  { subject: "How do I reset my password?", body: "I forgot my password and can't log in. What steps should I follow to reset it?", fromName: "Alice Johnson", fromEmail: "alice.johnson@gmail.com", status: "open", category: "general_question", daysAgo: 1 },
+  { subject: "What are your business hours?", body: "I'd like to know when your support team is available to answer questions.", fromName: "Marcus Lee", fromEmail: "marcus.lee@outlook.com", status: "resolved", category: "general_question", daysAgo: 3 },
+  { subject: "Where can I find the user manual?", body: "I just purchased your product and need the full user manual. Is it available online?", fromName: "Sophie Turner", fromEmail: "sophie.t@yahoo.com", status: "closed", category: "general_question", daysAgo: 10 },
+  { subject: "Do you offer student discounts?", body: "I'm a university student and wondering if there's a discount available for students.", fromName: "Ethan Brooks", fromEmail: "ethan.brooks@edu.com", status: "open", category: "general_question", daysAgo: 2 },
+  { subject: "Can I use the service in multiple countries?", body: "I travel frequently for work. Is the service available internationally?", fromName: "Priya Sharma", fromEmail: "priya.sharma@company.com", status: "resolved", category: "general_question", daysAgo: 7 },
+  { subject: "How many users can share one account?", body: "Our small team wants to share one subscription. Is this allowed?", fromName: "Tom Wallace", fromEmail: "tom.wallace@startup.io", status: "open", category: "general_question", daysAgo: 0 },
+  { subject: "Is there a free trial available?", body: "Before committing to a subscription, I'd like to try the product. Do you offer a free trial?", fromName: "Laura Chen", fromEmail: "laura.chen@design.co", status: "closed", category: "general_question", daysAgo: 14 },
+  { subject: "How do I update my billing address?", body: "I recently moved and need to update the billing address on my account.", fromName: "James O'Brien", fromEmail: "james.obrien@gmail.com", status: "resolved", category: "general_question", daysAgo: 5 },
+  { subject: "What payment methods do you accept?", body: "Do you accept PayPal or only credit cards? I prefer not to use a credit card online.", fromName: "Fatima Al-Hassan", fromEmail: "fatima.h@email.com", status: "open", category: "general_question", daysAgo: 1 },
+  { subject: "Can I change my username?", body: "I'd like to change my username to something more professional. Is that possible?", fromName: "Daniel Park", fromEmail: "daniel.park@corp.net", status: "resolved", category: "general_question", daysAgo: 9 },
+  { subject: "How do I cancel my subscription?", body: "I no longer need the service and would like to cancel before my next billing cycle.", fromName: "Hannah White", fromEmail: "hannah.white@personal.com", status: "open", category: "general_question", daysAgo: 2 },
+  { subject: "Do you have a mobile app?", body: "I prefer working from my phone. Is there a mobile app available for iOS or Android?", fromName: "Carlos Mendez", fromEmail: "carlos.m@gmail.com", status: "closed", category: "general_question", daysAgo: 20 },
+  { subject: "How do I export my data?", body: "I need to export all my data before I leave. What format does the export come in?", fromName: "Natalie Green", fromEmail: "natalie.g@business.com", status: "resolved", category: "general_question", daysAgo: 6 },
+  { subject: "Is the service GDPR compliant?", body: "Our company operates in the EU and we need to confirm your GDPR compliance before using the service.", fromName: "Klaus Weber", fromEmail: "k.weber@enterprise.de", status: "open", category: "general_question", daysAgo: 3 },
+  { subject: "Can I have two accounts with the same email?", body: "I want to separate my personal and business usage. Can I create two accounts with one email?", fromName: "Olivia Scott", fromEmail: "olivia.scott@work.com", status: "closed", category: "general_question", daysAgo: 30 },
+
+  // Technical Issues
+  { subject: "App crashes when I open the dashboard", body: "Every time I click on the dashboard tab, the app crashes immediately. I'm on version 3.2.1 on macOS Ventura.", fromName: "Ryan Mitchell", fromEmail: "ryan.mitchell@tech.com", status: "open", category: "technical_issue", daysAgo: 0 },
+  { subject: "Login page keeps redirecting in a loop", body: "I enter my credentials but get redirected back to the login page infinitely. Cleared cookies but still happening.", fromName: "Emma Davis", fromEmail: "emma.d@startup.com", status: "open", category: "technical_issue", daysAgo: 1 },
+  { subject: "File upload fails above 10MB", body: "I'm trying to upload a 25MB PDF but get an error. Smaller files work fine. Is there a size limit?", fromName: "Liam Thompson", fromEmail: "liam.t@agency.co", status: "resolved", category: "technical_issue", daysAgo: 4 },
+  { subject: "Two-factor authentication codes not working", body: "My 2FA codes from Google Authenticator are being rejected even though my phone time is synced.", fromName: "Zoe Martinez", fromEmail: "zoe.martinez@secure.net", status: "open", category: "technical_issue", daysAgo: 2 },
+  { subject: "Notifications not arriving on email", body: "I enabled email notifications but haven't received any for the past week. Checked spam folder — nothing there.", fromName: "Noah Anderson", fromEmail: "noah.anderson@personal.com", status: "open", category: "technical_issue", daysAgo: 3 },
+  { subject: "Dark mode not saving preference", body: "I switch to dark mode but every time I reload the page it goes back to light mode. Very frustrating.", fromName: "Isabella Clark", fromEmail: "isabella.c@design.io", status: "resolved", category: "technical_issue", daysAgo: 8 },
+  { subject: "CSV import fails with special characters", body: "Importing a CSV with accented characters (French names) results in garbled text in the database.", fromName: "Pierre Dupont", fromEmail: "pierre.dupont@france.com", status: "open", category: "technical_issue", daysAgo: 5 },
+  { subject: "API rate limit hit unexpectedly", body: "We're getting 429 errors even though we're well under our plan's API limit. Something seems off.", fromName: "Aisha Patel", fromEmail: "aisha.patel@devteam.io", status: "open", category: "technical_issue", daysAgo: 1 },
+  { subject: "Search results are not loading", body: "When I type in the search bar, the spinner appears but results never load. Happens on Chrome and Firefox.", fromName: "Jack Robinson", fromEmail: "jack.robinson@gmail.com", status: "resolved", category: "technical_issue", daysAgo: 11 },
+  { subject: "Unable to send invitations to team members", body: "The invite button does nothing when I click it. I've tried three different browsers.", fromName: "Sofia Rodriguez", fromEmail: "sofia.r@company.org", status: "open", category: "technical_issue", daysAgo: 2 },
+  { subject: "Charts not rendering on Safari", body: "All the analytics charts are blank on Safari 16. They work fine on Chrome. Is Safari supported?", fromName: "Finn O'Connor", fromEmail: "finn.oconnor@agency.com", status: "open", category: "technical_issue", daysAgo: 6 },
+  { subject: "Password reset link expires too fast", body: "The password reset link I receive via email expires before I can use it — even if I click within 2 minutes.", fromName: "Maya Singh", fromEmail: "maya.singh@user.com", status: "resolved", category: "technical_issue", daysAgo: 15 },
+  { subject: "Webhook not firing on record update", body: "We configured a webhook for record updates but it only fires on creation, not on edits. Using the REST API.", fromName: "Leo Kim", fromEmail: "leo.kim@integrations.dev", status: "open", category: "technical_issue", daysAgo: 3 },
+  { subject: "Session expires too quickly", body: "My session logs me out after just 10 minutes of inactivity. This is too short — can it be configured?", fromName: "Grace Liu", fromEmail: "grace.liu@remote.work", status: "resolved", category: "technical_issue", daysAgo: 12 },
+  { subject: "Broken image in email notifications", body: "The company logo in automated emails shows as a broken image. The alt text shows but not the image itself.", fromName: "Oscar Müller", fromEmail: "oscar.muller@gmbh.de", status: "open", category: "technical_issue", daysAgo: 4 },
+  { subject: "Slow loading times after recent update", body: "Since the update on Monday, page load times have gone from under 1 second to 8–10 seconds. Very noticeable.", fromName: "Chloe Evans", fromEmail: "chloe.evans@perf.io", status: "open", category: "technical_issue", daysAgo: 2 },
+  { subject: "Data not syncing between devices", body: "Changes I make on my laptop don't appear on my tablet until I force-refresh. Real-time sync seems broken.", fromName: "Samuel Wright", fromEmail: "sam.wright@cloud.com", status: "open", category: "technical_issue", daysAgo: 1 },
+  { subject: "Print layout is broken", body: "When I print a report, columns overlap and the table overflows off the page. The on-screen view looks fine.", fromName: "Victoria Adams", fromEmail: "victoria.adams@legal.co", status: "resolved", category: "technical_issue", daysAgo: 18 },
+  { subject: "Error 500 when saving large forms", body: "Filling out the project form with more than 20 fields causes a 500 error on save. Smaller forms work fine.", fromName: "Benjamin Carter", fromEmail: "ben.carter@pm.tools", status: "open", category: "technical_issue", daysAgo: 7 },
+  { subject: "Keyboard shortcuts not working on Windows", body: "The Ctrl+S save shortcut does nothing on Windows 11. Cmd+S works fine on my Mac though.", fromName: "Amelia Brown", fromEmail: "amelia.b@design.studio", status: "resolved", category: "technical_issue", daysAgo: 22 },
+  { subject: "Unable to delete archived projects", body: "When I try to permanently delete archived projects, I get 'Permission denied' even though I'm the owner.", fromName: "Henry Wilson", fromEmail: "henry.wilson@manager.com", status: "open", category: "technical_issue", daysAgo: 9 },
+
+  // Refund Requests
+  { subject: "Charged twice for the same month", body: "My bank statement shows two charges of $49.99 on the same date. Please refund the duplicate charge immediately.", fromName: "Charlotte Baker", fromEmail: "charlotte.baker@home.com", status: "open", category: "refund_request", daysAgo: 1 },
+  { subject: "Cancelled before renewal but still charged", body: "I cancelled my subscription on the 14th, but was charged for another month on the 15th. I want a full refund.", fromName: "George Hall", fromEmail: "george.hall@personal.net", status: "open", category: "refund_request", daysAgo: 2 },
+  { subject: "Refund for unused annual subscription", body: "I purchased the annual plan by mistake thinking it was monthly. I haven't used it at all — can I get a refund?", fromName: "Ella Young", fromEmail: "ella.young@email.com", status: "resolved", category: "refund_request", daysAgo: 5 },
+  { subject: "Wrong plan charged — signed up for basic, billed for pro", body: "I selected the Basic plan but my card was charged the Pro plan price ($149 vs $29). Please correct this.", fromName: "William Turner", fromEmail: "will.turner@freelance.com", status: "open", category: "refund_request", daysAgo: 0 },
+  { subject: "Service was down during paid period — requesting partial refund", body: "Your service was unavailable for 3 days last month due to an outage. I'd like a prorated refund for those days.", fromName: "Mia Harris", fromEmail: "mia.harris@business.co", status: "open", category: "refund_request", daysAgo: 3 },
+  { subject: "Trial converted to paid without warning", body: "My free trial ended and I was automatically charged without any advance notice. I want a refund and to cancel.", fromName: "Alexander King", fromEmail: "alex.king@personal.com", status: "resolved", category: "refund_request", daysAgo: 8 },
+  { subject: "Refund for team seats we never used", body: "We paid for 10 seats but only ever used 3. The remaining 7 seats were never activated. Can we get a partial refund?", fromName: "Abigail Scott", fromEmail: "abigail.scott@corp.com", status: "open", category: "refund_request", daysAgo: 4 },
+  { subject: "Discount code didn't apply at checkout", body: "I had a 20% discount code from your newsletter but it didn't apply during checkout. I was charged full price.", fromName: "Elijah Green", fromEmail: "eli.green@customer.com", status: "resolved", category: "refund_request", daysAgo: 6 },
+  { subject: "Charged after account deletion", body: "I deleted my account two weeks ago but received a charge yesterday. Please refund and confirm my account is gone.", fromName: "Aria Nelson", fromEmail: "aria.nelson@gmail.com", status: "open", category: "refund_request", daysAgo: 1 },
+  { subject: "Feature I paid for doesn't work as advertised", body: "I upgraded specifically for the AI report feature, but it produces incorrect results. I want a refund for the upgrade.", fromName: "Mason Lewis", fromEmail: "mason.lewis@analyst.io", status: "open", category: "refund_request", daysAgo: 2 },
+  { subject: "Annual plan refund — bought for an employee who left", body: "I purchased an annual licence for an employee who resigned the next day. Can I get a refund for the unused time?", fromName: "Harper Walker", fromEmail: "harper.walker@hr.com", status: "resolved", category: "refund_request", daysAgo: 10 },
+  { subject: "Double charge due to payment retry", body: "My first payment failed so I retried, but I was charged twice when my bank cleared both transactions.", fromName: "Evelyn Hill", fromEmail: "evelyn.hill@finance.co", status: "open", category: "refund_request", daysAgo: 0 },
+  { subject: "Charged full price instead of discounted renewal rate", body: "My renewal email said I'd get 30% off, but I was charged the full amount. Please honour the discount.", fromName: "Logan Campbell", fromEmail: "logan.campbell@user.net", status: "open", category: "refund_request", daysAgo: 1 },
+  { subject: "Refund requested — switched to competitor", body: "We've migrated to a competitor whose pricing fits our budget better. Requesting a prorated refund for remaining months.", fromName: "Scarlett Mitchell", fromEmail: "s.mitchell@startup.co", status: "closed", category: "refund_request", daysAgo: 25 },
+  { subject: "Wrong currency charged", body: "I'm based in Canada and expected to be billed in CAD, but was charged in USD at a worse exchange rate.", fromName: "Lucas Allen", fromEmail: "lucas.allen@canada.com", status: "resolved", category: "refund_request", daysAgo: 14 },
+
+  // More Technical Issues
+  { subject: "SSO login not working with Okta", body: "Our organisation uses Okta for SSO. After configuring SAML, clicking 'Login with SSO' gives a 403 error.", fromName: "Penelope Wright", fromEmail: "penelope.w@enterprise.com", status: "open", category: "technical_issue", daysAgo: 5 },
+  { subject: "Bulk delete not working on mobile", body: "I can select multiple items on mobile but the bulk delete button is greyed out. Works fine on desktop.", fromName: "Jackson Thomas", fromEmail: "jackson.t@mobile.io", status: "resolved", category: "technical_issue", daysAgo: 17 },
+  { subject: "Wrong timezone displayed in reports", body: "My reports show timestamps in UTC even though I've set my account timezone to EST. Dates are off by 5 hours.", fromName: "Layla Moore", fromEmail: "layla.moore@eastern.com", status: "open", category: "technical_issue", daysAgo: 3 },
+  { subject: "Markdown not rendering in comments", body: "I use **bold** and _italic_ in comments but they render as plain text with the asterisks visible.", fromName: "Josiah Jackson", fromEmail: "josiah.j@dev.com", status: "open", category: "technical_issue", daysAgo: 6 },
+  { subject: "Autosave not working on long documents", body: "For documents over 5,000 words, autosave stops working after about 20 minutes. Lost an hour of work yesterday.", fromName: "Stella Martin", fromEmail: "stella.m@writer.com", status: "open", category: "technical_issue", daysAgo: 1 },
+  { subject: "Integration with Slack sends duplicate messages", body: "Every event triggers two Slack notifications instead of one. This started after we updated the Slack integration settings.", fromName: "Owen Garcia", fromEmail: "owen.g@slack.user", status: "resolved", category: "technical_issue", daysAgo: 20 },
+  { subject: "Custom domain not pointing correctly", body: "I've set up the CNAME record as instructed but my custom domain still shows a 'domain not found' error after 48 hours.", fromName: "Lucy Martinez", fromEmail: "lucy.martinez@mybrand.com", status: "open", category: "technical_issue", daysAgo: 2 },
+  { subject: "PDF export cuts off last page", body: "When exporting long reports to PDF, the last page is always cut off. The content is there in HTML but not in the PDF.", fromName: "Julian Robinson", fromEmail: "julian.r@reports.co", status: "resolved", category: "technical_issue", daysAgo: 13 },
+  { subject: "Email verification link not received", body: "I signed up 2 hours ago but haven't received the verification email. Checked spam. Can you resend or verify manually?", fromName: "Violet Clark", fromEmail: "violet.clark@newuser.com", status: "open", category: "technical_issue", daysAgo: 0 },
+  { subject: "Unable to embed widget on WordPress site", body: "The embed code works on plain HTML but throws a script error on our WordPress site. Running WP 6.4.", fromName: "Caleb Lewis", fromEmail: "caleb.lewis@wp.site", status: "open", category: "technical_issue", daysAgo: 4 },
+
+  // More General Questions
+  { subject: "Do you offer an affiliate program?", body: "I have a large audience interested in productivity tools. Do you have an affiliate or referral program?", fromName: "Aurora Wilson", fromEmail: "aurora.w@influencer.co", status: "open", category: "general_question", daysAgo: 7 },
+  { subject: "What happens to my data if I downgrade?", body: "If I downgrade from Pro to Free, will I lose access to data created on the Pro plan?", fromName: "Dominic Taylor", fromEmail: "dominic.t@user.com", status: "resolved", category: "general_question", daysAgo: 4 },
+  { subject: "Can I get a VAT invoice?", body: "Our company is VAT registered and we need proper VAT invoices for our accounting. Can you issue these?", fromName: "Ingrid Johansson", fromEmail: "ingrid.j@company.se", status: "open", category: "general_question", daysAgo: 2 },
+  { subject: "Is there an on-premise version?", body: "We have strict data residency requirements and cannot use cloud services. Do you offer an on-premise solution?", fromName: "Theodore Anderson", fromEmail: "theo.anderson@gov.org", status: "open", category: "general_question", daysAgo: 9 },
+  { subject: "How do I transfer my account to a new email?", body: "I'm changing jobs and need to transfer my account to my personal email before my work email is deactivated.", fromName: "Clara Thompson", fromEmail: "clara.t@newjob.com", status: "resolved", category: "general_question", daysAgo: 6 },
+  { subject: "What's included in the Enterprise plan?", body: "I've read the pricing page but still have questions about what's included in Enterprise — specifically around SLAs.", fromName: "Vincent Moore", fromEmail: "vincent.m@enterprise.io", status: "open", category: "general_question", daysAgo: 1 },
+  { subject: "Can we white-label the product?", body: "We're an agency and would like to offer this tool to clients under our own brand. Do you support white-labelling?", fromName: "Rosalie Harris", fromEmail: "rosalie.h@agency.net", status: "resolved", category: "general_question", daysAgo: 11 },
+  { subject: "How long is data retained after cancellation?", body: "If we cancel our subscription, how long do you keep our data and when is it permanently deleted?", fromName: "Archer King", fromEmail: "archer.king@compliance.co", status: "open", category: "general_question", daysAgo: 3 },
+  { subject: "Do you have SOC 2 certification?", body: "Our security team requires SOC 2 Type II certification from all vendors. Can you share your compliance documentation?", fromName: "Daphne Walker", fromEmail: "daphne.w@security.org", status: "open", category: "general_question", daysAgo: 5 },
+  { subject: "Bulk user import — is it possible?", body: "We have 200 employees to onboard. Is there a way to bulk import users from a CSV rather than adding them one by one?", fromName: "Edmund Carter", fromEmail: "edmund.c@hr.enterprise.com", status: "resolved", category: "general_question", daysAgo: 8 },
+
+  // More Refund Requests
+  { subject: "Accidental upgrade to annual plan", body: "I meant to click 'Monthly' but accidentally clicked 'Annual' and was charged $599. Please refund the difference.", fromName: "Felicity Adams", fromEmail: "felicity.a@mistake.com", status: "open", category: "refund_request", daysAgo: 0 },
+  { subject: "Refund for addon that didn't function", body: "I purchased the Analytics addon for $29/month but the reports page never loaded correctly. 2 months wasted.", fromName: "Gregory Mitchell", fromEmail: "gregory.m@analytics.com", status: "resolved", category: "refund_request", daysAgo: 7 },
+  { subject: "Charged during free trial period", body: "My trial should have 14 days free but I was charged on day 3. Something is wrong with the billing system.", fromName: "Isadora Young", fromEmail: "isadora.y@trial.com", status: "open", category: "refund_request", daysAgo: 1 },
+  { subject: "Organisation dissolved — requesting refund for remaining term", body: "Our startup has shut down and we no longer need the service. Can we get a refund for the remaining 8 months?", fromName: "Jerome Phillips", fromEmail: "jerome.p@closedco.com", status: "open", category: "refund_request", daysAgo: 4 },
+  { subject: "Refund — product doesn't meet advertised specifications", body: "The real-time collaboration feature was listed on your pricing page but doesn't work as described. Requesting refund.", fromName: "Katarina Novak", fromEmail: "katarina.n@czech.com", status: "resolved", category: "refund_request", daysAgo: 12 },
+  { subject: "Charged for seats of users who never accepted invite", body: "5 of our 10 purchased seats belong to users who never accepted the invitation. We shouldn't be billed for those.", fromName: "Leonard Hughes", fromEmail: "leonard.h@team.com", status: "open", category: "refund_request", daysAgo: 6 },
+  { subject: "Plan auto-renewed while I was hospitalised", body: "I was in hospital and unable to cancel before the renewal date. I have documentation. Please issue a refund.", fromName: "Miriam Santos", fromEmail: "miriam.santos@email.com", status: "open", category: "refund_request", daysAgo: 2 },
+  { subject: "Refund for duplicate account charges", body: "My colleague and I unknowingly both created accounts for our team. We only need one — please refund the second.", fromName: "Nathan Cole", fromEmail: "nathan.cole@dupteam.com", status: "resolved", category: "refund_request", daysAgo: 9 },
+
+  // More Technical Issues (varied)
+  { subject: "Images not loading on slow connections", body: "On 3G or slow WiFi, images in the app never load — just spinners. Data loads but visuals don't.", fromName: "Ophelia Bennett", fromEmail: "ophelia.b@remote.org", status: "open", category: "technical_issue", daysAgo: 8 },
+  { subject: "Google Calendar sync creates duplicate events", body: "Syncing with Google Calendar results in every event appearing twice. Disabling and re-enabling doesn't help.", fromName: "Pascal Leblanc", fromEmail: "pascal.leblanc@calendar.fr", status: "resolved", category: "technical_issue", daysAgo: 16 },
+  { subject: "Email digest showing old data", body: "My weekly email digest is showing data from 3 weeks ago instead of the past 7 days.", fromName: "Quinn Foster", fromEmail: "quinn.f@digest.co", status: "open", category: "technical_issue", daysAgo: 5 },
+  { subject: "Cannot add secondary email address", body: "Every time I try to add a backup email in account settings, I get 'Something went wrong' with no details.", fromName: "Rebecca Stone", fromEmail: "rebecca.stone@primary.com", status: "open", category: "technical_issue", daysAgo: 3 },
+  { subject: "Drag and drop not working on Firefox", body: "I can't drag tasks between columns on Firefox 120. Works fine on Chrome. Is Firefox officially supported?", fromName: "Sebastian Fox", fromEmail: "sebastian.fox@firefox.user", status: "resolved", category: "technical_issue", daysAgo: 21 },
+  { subject: "Account locked after too many login attempts", body: "I accidentally locked my account after forgetting my password. The unlock email never arrived. Please help.", fromName: "Tatiana Volkov", fromEmail: "tatiana.v@locked.com", status: "open", category: "technical_issue", daysAgo: 0 },
+  { subject: "Wrong language displayed despite correct setting", body: "My account is set to Spanish but the interface shows in English. I've tried changing it multiple times.", fromName: "Umberto Ferrari", fromEmail: "umberto.f@italiano.it", status: "resolved", category: "technical_issue", daysAgo: 19 },
+  { subject: "Permissions not inherited for sub-folders", body: "When I set permissions on a parent folder, sub-folders don't inherit them. Each has to be set manually which is tedious.", fromName: "Vivienne Laurent", fromEmail: "vivienne.l@docmanage.com", status: "open", category: "technical_issue", daysAgo: 7 },
+  { subject: "Zapier integration stopped working", body: "Our Zapier workflows stopped triggering events yesterday without any changes on our end. Error: 'Auth failed'.", fromName: "Wesley Park", fromEmail: "wesley.p@automations.io", status: "open", category: "technical_issue", daysAgo: 1 },
+  { subject: "Screen reader compatibility issues", body: "Several interactive elements in the dashboard are not labelled properly and cannot be navigated by screen readers.", fromName: "Xena Morris", fromEmail: "xena.m@accessibility.org", status: "open", category: "technical_issue", daysAgo: 4 },
+  { subject: "Backup restore fails silently", body: "When I restore a backup, the progress bar completes but the data doesn't actually restore. No error message shown.", fromName: "Yusuf Ibrahim", fromEmail: "yusuf.ibrahim@data.co", status: "open", category: "technical_issue", daysAgo: 2 },
+  { subject: "Phone number field rejects valid international numbers", body: "I can't enter my UK phone number (+44 format). The field rejects it even though I'm using a valid international format.", fromName: "Zara Coleman", fromEmail: "zara.coleman@uk.com", status: "open", category: "technical_issue", daysAgo: 6 },
+
+  // Mixed categories at different stages
+  { subject: "How do I set up team permissions?", body: "I want different team members to have different levels of access. How do I configure role-based permissions?", fromName: "Adrian Fox", fromEmail: "adrian.fox@teamlead.com", status: "resolved", category: "general_question", daysAgo: 13 },
+  { subject: "Refund — moved to nonprofit plan but was billed commercial rate", body: "We registered as a nonprofit and were approved, but our invoice still shows the commercial price. Please adjust.", fromName: "Beatrice Stone", fromEmail: "beatrice.s@nonprofit.org", status: "open", category: "refund_request", daysAgo: 3 },
+  { subject: "Table sorting resets after page refresh", body: "I sort a table by date, navigate away, come back, and the sort is gone. Can sorting state be persisted?", fromName: "Cedric Blake", fromEmail: "cedric.b@ux.com", status: "open", category: "technical_issue", daysAgo: 5 },
+  { subject: "Do you support SCIM provisioning?", body: "We'd like to automate user provisioning and deprovisioning through SCIM. Is this supported?", fromName: "Delphine Morel", fromEmail: "delphine.m@it.fr", status: "open", category: "general_question", daysAgo: 2 },
+  { subject: "Overcharged after applying coupon", body: "I applied a 50% coupon code but was still charged the full rate. The coupon showed as applied during checkout.", fromName: "Ewan MacGregor", fromEmail: "ewan.mac@scotland.com", status: "resolved", category: "refund_request", daysAgo: 10 },
+  { subject: "Attachments not saving in tickets", body: "When I upload an attachment to a support ticket, it appears to upload but isn't there when I reload the page.", fromName: "Francesca Romano", fromEmail: "francesca.r@milano.it", status: "open", category: "technical_issue", daysAgo: 1 },
+  { subject: "Is there a sandbox environment for testing?", body: "We're integrating your API and need a sandbox environment to test without affecting real data or being billed.", fromName: "Gustav Eriksson", fromEmail: "gustav.e@dev.se", status: "resolved", category: "general_question", daysAgo: 16 },
+  { subject: "Requesting refund due to prolonged downtime", body: "Your service was down for 18 hours last week with no SLA credit offered. We're requesting a refund per our contract.", fromName: "Helena Walsh", fromEmail: "helena.walsh@sla.co", status: "open", category: "refund_request", daysAgo: 7 },
+  { subject: "Search indexing delay is too long", body: "New records take 15–20 minutes to appear in search results. For our workflow, near-real-time indexing is essential.", fromName: "Ivan Petrov", fromEmail: "ivan.petrov@search.ru", status: "open", category: "technical_issue", daysAgo: 3 },
+  { subject: "Can I get a copy of your DPA?", body: "For GDPR compliance, I need a signed Data Processing Agreement. Can you send a copy or point me to where I can sign?", fromName: "Julia Braun", fromEmail: "julia.braun@dsgvo.de", status: "open", category: "general_question", daysAgo: 1 },
+] as const;
+
+async function main() {
+  const now = new Date();
+  let created = 0;
+
+  for (const t of tickets) {
+    const createdAt = new Date(now);
+    createdAt.setDate(createdAt.getDate() - t.daysAgo);
+    createdAt.setHours(Math.floor(Math.random() * 12) + 8); // between 8am–8pm
+    createdAt.setMinutes(Math.floor(Math.random() * 60));
+
+    await prisma.ticket.create({
+      data: {
+        subject: t.subject,
+        body: t.body,
+        fromName: t.fromName,
+        fromEmail: t.fromEmail,
+        status: t.status as never,
+        category: t.category as never,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    });
+    created++;
+  }
+
+  console.log(`Created ${created} tickets.`);
+  await prisma.$disconnect();
+}
+
+main();

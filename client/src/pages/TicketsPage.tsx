@@ -1,5 +1,7 @@
+import { useState } from "react";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { type SortingState } from "@tanstack/react-table";
 import { TicketStatus, TicketCategory } from "core";
 import { Skeleton } from "@/components/ui/skeleton";
 import TicketsTable from "./TicketsTable";
@@ -15,10 +17,18 @@ interface Ticket {
 }
 
 export default function TicketsPage() {
+  const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
+
+  const sortBy = sorting[0]?.id ?? "createdAt";
+  const order = sorting[0]?.desc === false ? "asc" : "desc";
+
   const { data: tickets = [], isLoading, error } = useQuery<Ticket[]>({
-    queryKey: ["tickets"],
+    queryKey: ["tickets", sorting],
     queryFn: async () => {
-      const { data } = await axios.get<Ticket[]>("/api/tickets", { withCredentials: true });
+      const { data } = await axios.get<Ticket[]>("/api/tickets", {
+        params: { sortBy, order },
+        withCredentials: true,
+      });
       return data;
     },
   });
@@ -43,7 +53,13 @@ export default function TicketsPage() {
         </div>
       )}
 
-      {!isLoading && !error && <TicketsTable tickets={tickets} />}
+      {!isLoading && !error && (
+        <TicketsTable
+          tickets={tickets}
+          sorting={sorting}
+          onSortingChange={setSorting}
+        />
+      )}
     </div>
   );
 }

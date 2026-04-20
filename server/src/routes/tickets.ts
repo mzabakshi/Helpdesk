@@ -8,19 +8,36 @@ router.use(requireAuth);
 
 const sortableFields = ["subject", "fromName", "fromEmail", "status", "category", "createdAt"] as const;
 
-const sortSchema = z.object({
+const querySchema = z.object({
   sortBy: z.enum(sortableFields).default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
+  status: z.enum(["open", "resolved", "closed"]).optional(),
+  category: z.enum(["general_question", "technical_issue", "refund_request"]).optional(),
+  search: z.string().trim().optional(),
 });
 
 // GET /api/tickets
 router.get("/", async (req, res) => {
-  const { sortBy, order } = sortSchema.parse({
+  const { sortBy, order, status, category, search } = querySchema.parse({
     sortBy: req.query.sortBy,
     order: req.query.order,
+    status: req.query.status || undefined,
+    category: req.query.category || undefined,
+    search: req.query.search || undefined,
   });
 
   const tickets = await prisma.ticket.findMany({
+    where: {
+      ...(status && { status }),
+      ...(category && { category }),
+      ...(search && {
+        OR: [
+          { subject: { contains: search, mode: "insensitive" } },
+          { fromName: { contains: search, mode: "insensitive" } },
+          { fromEmail: { contains: search, mode: "insensitive" } },
+        ],
+      }),
+    },
     select: {
       id: true,
       subject: true,

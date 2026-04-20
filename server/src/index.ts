@@ -7,6 +7,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import usersRouter from "./routes/users";
 import webhooksRouter from "./routes/webhooks";
+import ticketsRouter from "./routes/tickets";
 import prisma from "./db";
 
 const app = express();
@@ -44,6 +45,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/users", usersRouter);
+app.use("/api/tickets", ticketsRouter);
 app.use("/api/webhooks", webhooksRouter);
 
 // Test-only route: never enabled in production.

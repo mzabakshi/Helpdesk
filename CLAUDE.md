@@ -125,10 +125,15 @@ if (user.role === "admin") { ... }
 
 ## E2E Testing
 
-Use the `playwright-e2e-writer` agent for all Playwright e2e test writing. Invoke it whenever:
-- A new feature or user flow needs test coverage
-- An existing feature is modified and tests need updating
-- Auth flows, role-based access, or CRUD operations need verification
+**Default to component tests** (Vitest + React Testing Library) for all feature coverage. Use Playwright e2e tests only when the scenario genuinely cannot be covered at the component level:
+
+- Auth flows that require real browser session cookies (e.g. login redirect behaviour)
+- Webhook or external-integration endpoints (no browser UI to test against)
+- Cross-page flows where multiple routes and navigation are integral to the assertion
+
+Do **not** write e2e tests for CRUD operations, form validation, loading/error states, or role-based UI — cover those with component tests instead.
+
+When e2e tests are warranted, use the `playwright-e2e-writer` agent to write them.
 
 ## Notes
 - Vite proxies `/api/*` requests to `http://localhost:3000` — always prefix API calls with `/api`

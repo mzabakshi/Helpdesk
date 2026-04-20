@@ -14,42 +14,54 @@ const querySchema = z.object({
   status: z.enum(["open", "resolved", "closed"]).optional(),
   category: z.enum(["general_question", "technical_issue", "refund_request"]).optional(),
   search: z.string().trim().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
 });
 
 // GET /api/tickets
 router.get("/", async (req, res) => {
-  const { sortBy, order, status, category, search } = querySchema.parse({
+  const { sortBy, order, status, category, search, page, pageSize } = querySchema.parse({
     sortBy: req.query.sortBy,
     order: req.query.order,
     status: req.query.status || undefined,
     category: req.query.category || undefined,
     search: req.query.search || undefined,
+    page: req.query.page,
+    pageSize: req.query.pageSize,
   });
 
-  const tickets = await prisma.ticket.findMany({
-    where: {
-      ...(status && { status }),
-      ...(category && { category }),
-      ...(search && {
-        OR: [
-          { subject: { contains: search, mode: "insensitive" } },
-          { fromName: { contains: search, mode: "insensitive" } },
-          { fromEmail: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-    },
-    select: {
-      id: true,
-      subject: true,
-      fromName: true,
-      fromEmail: true,
-      status: true,
-      category: true,
-      createdAt: true,
-    },
-    orderBy: { [sortBy]: order },
-  });
-  res.json(tickets);
+  const where = {
+    ...(status && { status }),
+    ...(category && { category }),
+    ...(search && {
+      OR: [
+        { subject: { contains: search, mode: "insensitive" as const } },
+        { fromName: { contains: search, mode: "insensitive" as const } },
+        { fromEmail: { contains: search, mode: "insensitive" as const } },
+      ],
+    }),
+  };
+
+  const [tickets, total] = await Promise.all([
+    prisma.ticket.findMany({
+      where,
+      select: {
+        id: true,
+        subject: true,
+        fromName: true,
+        fromEmail: true,
+        status: true,
+        category: true,
+        createdAt: true,
+      },
+      orderBy: { [sortBy]: order },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  res.json({ data: tickets, total, page, pageSize });
 });
 
 export default router;

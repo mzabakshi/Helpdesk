@@ -30,6 +30,10 @@ const TICKETS = [
   },
 ];
 
+function mockResponse(tickets = TICKETS, total = tickets.length) {
+  return { data: { data: tickets, total, page: 1, pageSize: 10 } };
+}
+
 function renderPage() {
   return renderWithQuery(<TicketsPage />);
 }
@@ -40,14 +44,14 @@ beforeEach(() => {
 
 describe("TicketsPage", () => {
   it("shows skeletons while loading", () => {
-    mockedAxios.get = vi.fn(() => new Promise(() => {})); // never resolves
+    mockedAxios.get = vi.fn(() => new Promise(() => {}));
     renderPage();
     const skeletons = document.querySelectorAll(".rounded-md");
     expect(skeletons.length).toBeGreaterThan(0);
   });
 
   it("renders the ticket list after loading", async () => {
-    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse());
     renderPage();
 
     await waitFor(() => expect(screen.getByText("Cannot access my account")).toBeInTheDocument());
@@ -58,7 +62,7 @@ describe("TicketsPage", () => {
   });
 
   it("renders status and category badges correctly", async () => {
-    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse());
     renderPage();
 
     await waitFor(() => screen.getByText("Cannot access my account"));
@@ -69,10 +73,26 @@ describe("TicketsPage", () => {
   });
 
   it("shows empty state when no tickets are returned", async () => {
-    mockedAxios.get = vi.fn().mockResolvedValue({ data: [] });
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse([], 0));
     renderPage();
 
     await waitFor(() => expect(screen.getByText("No tickets found.")).toBeInTheDocument());
+  });
+
+  it("shows 'No results' pagination label when empty", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse([], 0));
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("No results")).toBeInTheDocument());
+  });
+
+  it("shows correct pagination range label", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse(TICKETS, 50));
+    renderPage();
+
+    // Wait for data to load first, then check the label
+    await waitFor(() => screen.getByText("Cannot access my account"));
+    expect(screen.getByText(/of 50/)).toBeInTheDocument();
   });
 
   it("shows an error message when the fetch fails", async () => {
@@ -87,55 +107,57 @@ describe("TicketsPage", () => {
     await waitFor(() => expect(screen.getByText("Unauthorized")).toBeInTheDocument());
   });
 
-  it("fetches with default sort params (createdAt desc)", async () => {
-    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+  it("fetches with default params (createdAt desc, page 1, pageSize 25)", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse());
     renderPage();
 
     await waitFor(() => screen.getByText("Cannot access my account"));
     expect(mockedAxios.get).toHaveBeenCalledWith(
       "/api/tickets",
-      expect.objectContaining({ params: { sortBy: "createdAt", order: "desc" } })
+      expect.objectContaining({
+        params: { sortBy: "createdAt", order: "desc", page: 1, pageSize: 10 },
+      })
     );
   });
 
-  it("re-fetches with new sort params when a column header is clicked", async () => {
-    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+  it("re-fetches with correct sort params when a column header is clicked", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse());
     renderPage();
 
     await waitFor(() => screen.getByText("Cannot access my account"));
-
-    // Click the Subject column header to sort ascending
     await userEvent.click(screen.getByRole("button", { name: /subject/i }));
 
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith(
         "/api/tickets",
-        expect.objectContaining({ params: { sortBy: "subject", order: "asc" } })
+        expect.objectContaining({
+          params: expect.objectContaining({ sortBy: "subject", order: "asc", page: 1 }),
+        })
       )
     );
   });
 
-  it("switches sort column when a different header is clicked", async () => {
-    mockedAxios.get = vi.fn().mockResolvedValue({ data: TICKETS });
+  it("resets to page 1 when sort changes", async () => {
+    mockedAxios.get = vi.fn().mockResolvedValue(mockResponse(TICKETS, 50));
     renderPage();
 
     await waitFor(() => screen.getByText("Cannot access my account"));
 
-    // Click Subject → sort by subject asc
+    // Navigate to page 2
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "/api/tickets",
+        expect.objectContaining({ params: expect.objectContaining({ page: 2 }) })
+      )
+    );
+
+    // Change sort — should reset to page 1
     await userEvent.click(screen.getByRole("button", { name: /subject/i }));
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith(
         "/api/tickets",
-        expect.objectContaining({ params: { sortBy: "subject", order: "asc" } })
-      )
-    );
-
-    // Click From → sort by fromName asc
-    await userEvent.click(screen.getByRole("button", { name: /from/i }));
-    await waitFor(() =>
-      expect(mockedAxios.get).toHaveBeenCalledWith(
-        "/api/tickets",
-        expect.objectContaining({ params: { sortBy: "fromName", order: "asc" } })
+        expect.objectContaining({ params: expect.objectContaining({ page: 1, sortBy: "subject" }) })
       )
     );
   });

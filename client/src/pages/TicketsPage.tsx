@@ -5,6 +5,7 @@ import { type SortingState } from "@tanstack/react-table";
 import { TicketStatus, TicketCategory } from "core";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import TicketsTable from "./TicketsTable";
 
 interface Ticket {
@@ -25,36 +25,48 @@ interface Ticket {
   createdAt: string;
 }
 
-const statusOptions: { label: string; value: TicketStatus }[] = [
+interface TicketsResponse {
+  data: Ticket[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+const statusOptions = [
   { label: "Open", value: TicketStatus.Open },
   { label: "Resolved", value: TicketStatus.Resolved },
   { label: "Closed", value: TicketStatus.Closed },
 ];
 
-const categoryOptions: { label: string; value: TicketCategory }[] = [
+const categoryOptions = [
   { label: "General Question", value: TicketCategory.GeneralQuestion },
   { label: "Technical Issue", value: TicketCategory.TechnicalIssue },
   { label: "Refund Request", value: TicketCategory.RefundRequest },
 ];
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
+
 export default function TicketsPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("");
-  const [category, setCategory] = useState<string>("");
+  const [status, setStatus] = useState("");
+  const [category, setCategory] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const sortBy = sorting[0]?.id ?? "createdAt";
   const order = sorting[0]?.desc === false ? "asc" : "desc";
-
   const hasFilters = search !== "" || status !== "" || category !== "";
 
-  const { data: tickets = [], isLoading, error } = useQuery<Ticket[]>({
-    queryKey: ["tickets", sorting, search, status, category],
+  const { data, isLoading, error } = useQuery<TicketsResponse>({
+    queryKey: ["tickets", sorting, search, status, category, page, pageSize],
     queryFn: async () => {
-      const { data } = await axios.get<Ticket[]>("/api/tickets", {
+      const { data } = await axios.get<TicketsResponse>("/api/tickets", {
         params: {
           sortBy,
           order,
+          page,
+          pageSize,
           ...(search && { search }),
           ...(status && { status }),
           ...(category && { category }),
@@ -65,10 +77,41 @@ export default function TicketsPage() {
     },
   });
 
+  const tickets = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
   function clearFilters() {
     setSearch("");
     setStatus("");
     setCategory("");
+    setPage(1);
+  }
+
+  // Reset to page 1 when filters/sort change
+  function handleSortingChange(updater: SortingState | ((prev: SortingState) => SortingState)) {
+    setSorting(updater);
+    setPage(1);
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function handleStatusChange(value: string | null) {
+    setStatus(!value || value === "all" ? "" : value);
+    setPage(1);
+  }
+
+  function handleCategoryChange(value: string | null) {
+    setCategory(!value || value === "all" ? "" : value);
+    setPage(1);
+  }
+
+  function handlePageSizeChange(value: string | null) {
+    if (value) setPageSize(Number(value));
+    setPage(1);
   }
 
   return (
@@ -82,41 +125,31 @@ export default function TicketsPage() {
         <Input
           placeholder="Search subject, name or email…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="w-72"
           aria-label="Search tickets"
         />
 
-        <Select
-          value={status}
-          onValueChange={(v) => setStatus(v === "all" ? "" : v)}
-        >
+        <Select value={status} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-40" aria-label="Filter by status">
             <SelectValue placeholder="All statuses" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             {statusOptions.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select
-          value={category}
-          onValueChange={(v) => setCategory(v === "all" ? "" : (v ?? ""))}
-        >
+        <Select value={category} onValueChange={handleCategoryChange}>
           <SelectTrigger className="w-48" aria-label="Filter by category">
             <SelectValue placeholder="All categories" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
             {categoryOptions.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -136,18 +169,63 @@ export default function TicketsPage() {
 
       {isLoading && (
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: pageSize }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full rounded-md" />
           ))}
         </div>
       )}
 
       {!isLoading && !error && (
-        <TicketsTable
-          tickets={tickets}
-          sorting={sorting}
-          onSortingChange={setSorting}
-        />
+        <>
+          <TicketsTable
+            tickets={tickets}
+            sorting={sorting}
+            onSortingChange={handleSortingChange}
+          />
+
+          {/* Pagination controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Rows per page</span>
+              <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+                <SelectTrigger className="w-20 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                {total === 0
+                  ? "No results"
+                  : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total}`}
+              </span>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

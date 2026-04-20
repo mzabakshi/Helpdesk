@@ -42,7 +42,14 @@ const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> =
   [TicketStatus.Closed]: "outline",
 };
 
+const statusLabel: Record<TicketStatus, string> = {
+  [TicketStatus.Open]: "Open",
+  [TicketStatus.Resolved]: "Resolved",
+  [TicketStatus.Closed]: "Closed",
+};
+
 const categoryLabel: Record<TicketCategory, string> = {
+  [TicketCategory.None]: "None",
   [TicketCategory.GeneralQuestion]: "General Question",
   [TicketCategory.TechnicalIssue]: "Technical Issue",
   [TicketCategory.RefundRequest]: "Refund Request",
@@ -75,7 +82,7 @@ const columns = [
     enableSorting: true,
     cell: (info) => (
       <Badge variant={statusVariant[info.getValue()]}>
-        {info.getValue()}
+        {statusLabel[info.getValue()]}
       </Badge>
     ),
   }),

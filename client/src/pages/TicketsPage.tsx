@@ -39,6 +39,7 @@ const statusOptions = [
 ];
 
 const categoryOptions = [
+  { label: "None", value: TicketCategory.None },
   { label: "General Question", value: TicketCategory.GeneralQuestion },
   { label: "Technical Issue", value: TicketCategory.TechnicalIssue },
   { label: "Refund Request", value: TicketCategory.RefundRequest },

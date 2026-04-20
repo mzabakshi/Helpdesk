@@ -7,6 +7,7 @@ export enum TicketStatus {
 }
 
 export enum TicketCategory {
+  None = "none",
   GeneralQuestion = "general_question",
   TechnicalIssue = "technical_issue",
   RefundRequest = "refund_request",
@@ -28,4 +29,9 @@ export type Ticket = z.infer<typeof ticketSchema>;
 
 export const assignTicketSchema = z.object({
   assignedToId: z.string().nullable(),
+});
+
+export const updateTicketSchema = z.object({
+  status: z.nativeEnum(TicketStatus).optional(),
+  category: z.nativeEnum(TicketCategory).optional(),
 });

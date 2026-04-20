@@ -63,81 +63,6 @@ describe("TicketDetailPage", () => {
     expect(screen.getByText("I have been unable to log in for two days.")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
     expect(screen.getByText(/jane@example\.com/)).toBeInTheDocument();
-    expect(screen.getByText(TicketStatus.Open)).toBeInTheDocument();
-    expect(screen.getByText("Technical Issue")).toBeInTheDocument();
-  });
-
-  it("shows 'Unassigned' when no agent is assigned", async () => {
-    mockGet({ ...TICKET, assignedTo: null });
-    renderPage();
-
-    await waitFor(() => screen.getByText("Cannot login"));
-    expect(screen.getByText("Unassigned")).toBeInTheDocument();
-  });
-
-  it("shows the assigned agent's name in the dropdown trigger", async () => {
-    mockGet({ ...TICKET, assignedTo: { id: "agent-1", name: "Alice" } });
-    renderPage();
-
-    await waitFor(() => screen.getByText("Cannot login"));
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-  });
-
-  it("calls PATCH with the selected agent id when an agent is chosen", async () => {
-    mockGet();
-    mockedAxios.patch = vi.fn().mockResolvedValue({
-      data: { ...TICKET, assignedTo: { id: "agent-1", name: "Alice" } },
-    });
-    renderPage();
-
-    await waitFor(() => screen.getByText("Unassigned"));
-
-    await userEvent.click(screen.getByRole("combobox"));
-    await userEvent.click(screen.getByRole("option", { name: "Alice" }));
-
-    await waitFor(() =>
-      expect(mockedAxios.patch).toHaveBeenCalledWith(
-        "/api/tickets/ticket-1/assign",
-        { assignedToId: "agent-1" },
-        expect.any(Object)
-      )
-    );
-  });
-
-  it("calls PATCH with null when 'Unassigned' is selected", async () => {
-    mockGet({ ...TICKET, assignedTo: { id: "agent-1", name: "Alice" } });
-    mockedAxios.patch = vi.fn().mockResolvedValue({
-      data: { ...TICKET, assignedTo: null },
-    });
-    renderPage();
-
-    await waitFor(() => screen.getByText("Alice"));
-
-    await userEvent.click(screen.getByRole("combobox"));
-    await userEvent.click(screen.getByRole("option", { name: "Unassigned" }));
-
-    await waitFor(() =>
-      expect(mockedAxios.patch).toHaveBeenCalledWith(
-        "/api/tickets/ticket-1/assign",
-        { assignedToId: null },
-        expect.any(Object)
-      )
-    );
-  });
-
-  it("disables the dropdown while the assign mutation is pending", async () => {
-    mockGet();
-    mockedAxios.patch = vi.fn(() => new Promise(() => {}));
-    renderPage();
-
-    await waitFor(() => screen.getByText("Unassigned"));
-
-    await userEvent.click(screen.getByRole("combobox"));
-    await userEvent.click(screen.getByRole("option", { name: "Alice" }));
-
-    await waitFor(() =>
-      expect(screen.getByRole("combobox")).toBeDisabled()
-    );
   });
 
   it("shows an error message when the ticket fetch fails", async () => {
@@ -154,6 +79,189 @@ describe("TicketDetailPage", () => {
     );
   });
 
+  // ── Status ────────────────────────────────────────────────────────────────
+
+  it("shows the current status in the Status select", async () => {
+    mockGet();
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+    expect(screen.getByRole("combobox", { name: "Status" })).toHaveTextContent("Open");
+  });
+
+  it("calls PATCH with the new status when status is changed", async () => {
+    mockGet();
+    mockedAxios.patch = vi.fn().mockResolvedValue({ data: { ...TICKET, status: TicketStatus.Resolved } });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Status" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Resolved" }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1",
+        { status: TicketStatus.Resolved },
+        expect.any(Object)
+      )
+    );
+  });
+
+  it("disables the Status select while the update mutation is pending", async () => {
+    mockGet();
+    mockedAxios.patch = vi.fn(() => new Promise(() => {}));
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Status" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Resolved" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status" })).toBeDisabled()
+    );
+  });
+
+  it("shows an error when the status update fails", async () => {
+    mockGet();
+    const err = Object.assign(new Error("Server error"), {
+      isAxiosError: true,
+      response: { data: { error: "Failed to update status" } },
+    });
+    mockedAxios.patch = vi.fn().mockRejectedValue(err);
+    vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never);
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Status" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Resolved" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Failed to update status")).toBeInTheDocument()
+    );
+  });
+
+  // ── Category ──────────────────────────────────────────────────────────────
+
+  it("shows the current category in the Category select", async () => {
+    mockGet();
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+    expect(screen.getByRole("combobox", { name: "Category" })).toHaveTextContent("Technical Issue");
+  });
+
+  it("calls PATCH with the new category when category is changed", async () => {
+    mockGet();
+    mockedAxios.patch = vi.fn().mockResolvedValue({
+      data: { ...TICKET, category: TicketCategory.RefundRequest },
+    });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Category" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Refund Request" }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1",
+        { category: TicketCategory.RefundRequest },
+        expect.any(Object)
+      )
+    );
+  });
+
+  it("disables the Category select while the update mutation is pending", async () => {
+    mockGet();
+    mockedAxios.patch = vi.fn(() => new Promise(() => {}));
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Category" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Refund Request" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Category" })).toBeDisabled()
+    );
+  });
+
+  // ── Assignment ────────────────────────────────────────────────────────────
+
+  it("shows 'Unassigned' when no agent is assigned", async () => {
+    mockGet({ ...TICKET, assignedTo: null });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+    expect(screen.getByRole("combobox", { name: "Assigned to" })).toHaveTextContent("Unassigned");
+  });
+
+  it("shows the assigned agent's name in the Assigned to select", async () => {
+    mockGet({ ...TICKET, assignedTo: { id: "agent-1", name: "Alice" } });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+    expect(screen.getByRole("combobox", { name: "Assigned to" })).toHaveTextContent("Alice");
+  });
+
+  it("calls PATCH /assign with the agent id when an agent is chosen", async () => {
+    mockGet();
+    mockedAxios.patch = vi.fn().mockResolvedValue({
+      data: { ...TICKET, assignedTo: { id: "agent-1", name: "Alice" } },
+    });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Assigned to" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Alice" }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1/assign",
+        { assignedToId: "agent-1" },
+        expect.any(Object)
+      )
+    );
+  });
+
+  it("calls PATCH /assign with null when 'Unassigned' is selected", async () => {
+    mockGet({ ...TICKET, assignedTo: { id: "agent-1", name: "Alice" } });
+    mockedAxios.patch = vi.fn().mockResolvedValue({ data: { ...TICKET, assignedTo: null } });
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Assigned to" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Unassigned" }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        "/api/tickets/ticket-1/assign",
+        { assignedToId: null },
+        expect.any(Object)
+      )
+    );
+  });
+
+  it("disables the Assigned to select while the assign mutation is pending", async () => {
+    mockGet();
+    mockedAxios.patch = vi.fn(() => new Promise(() => {}));
+    renderPage();
+
+    await waitFor(() => screen.getByText("Cannot login"));
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Assigned to" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Alice" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Assigned to" })).toBeDisabled()
+    );
+  });
+
   it("shows an inline error when the assign mutation fails", async () => {
     mockGet();
     const err = Object.assign(new Error("Bad request"), {
@@ -164,24 +272,13 @@ describe("TicketDetailPage", () => {
     vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never);
     renderPage();
 
-    await waitFor(() => screen.getByText("Unassigned"));
+    await waitFor(() => screen.getByText("Cannot login"));
 
-    await userEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(screen.getByRole("combobox", { name: "Assigned to" }));
     await userEvent.click(await screen.findByRole("option", { name: "Alice" }));
 
     await waitFor(() =>
       expect(screen.getByText("Agent not found")).toBeInTheDocument()
     );
-  });
-
-  it("renders the agents list in the dropdown", async () => {
-    mockGet();
-    renderPage();
-
-    await waitFor(() => screen.getByText("Unassigned"));
-
-    await userEvent.click(screen.getByRole("combobox"));
-    expect(await screen.findByRole("option", { name: "Alice" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Bob" })).toBeInTheDocument();
   });
 });

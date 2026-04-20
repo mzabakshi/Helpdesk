@@ -3,9 +3,8 @@ import AppLink from "@/components/AppLink";
 import axios from "axios";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TicketStatus, TicketCategory } from "core";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -33,17 +32,37 @@ interface Ticket {
   updatedAt: string;
 }
 
-const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> = {
-  [TicketStatus.Open]: "default",
-  [TicketStatus.Resolved]: "secondary",
-  [TicketStatus.Closed]: "outline",
+const statusOptions: { label: string; value: TicketStatus }[] = [
+  { label: "Open", value: TicketStatus.Open },
+  { label: "Resolved", value: TicketStatus.Resolved },
+  { label: "Closed", value: TicketStatus.Closed },
+];
+
+const categoryOptions: { label: string; value: TicketCategory }[] = [
+  { label: "None", value: TicketCategory.None },
+  { label: "General Question", value: TicketCategory.GeneralQuestion },
+  { label: "Technical Issue", value: TicketCategory.TechnicalIssue },
+  { label: "Refund Request", value: TicketCategory.RefundRequest },
+];
+
+const statusLabel: Record<TicketStatus, string> = {
+  [TicketStatus.Open]: "Open",
+  [TicketStatus.Resolved]: "Resolved",
+  [TicketStatus.Closed]: "Closed",
 };
 
 const categoryLabel: Record<TicketCategory, string> = {
+  [TicketCategory.None]: "None",
   [TicketCategory.GeneralQuestion]: "General Question",
   [TicketCategory.TechnicalIssue]: "Technical Issue",
   [TicketCategory.RefundRequest]: "Refund Request",
 };
+
+function errorMessage(err: unknown, fallback: string) {
+  return axios.isAxiosError(err)
+    ? (err.response?.data?.error ?? err.message)
+    : fallback;
+}
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,27 +88,28 @@ export default function TicketDetailPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (patch: { status?: TicketStatus; category?: TicketCategory }) =>
+      axios.patch(`/api/tickets/${id}`, patch, { withCredentials: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ticket", id] }),
+  });
+
   const assignMutation = useMutation({
     mutationFn: (assignedToId: string | null) =>
       axios.patch(`/api/tickets/${id}/assign`, { assignedToId }, { withCredentials: true }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ticket", id] }),
   });
 
-  function handleAssignChange(value: string) {
-    assignMutation.mutate(value === "unassigned" ? null : value);
-  }
-
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" className="-ml-2" asChild>
-          <AppLink to="/tickets" className="flex items-center hover:no-underline">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to tickets
-          </AppLink>
-        </Button>
+        <AppLink
+          to="/tickets"
+          className={buttonVariants({ variant: "ghost", size: "sm" }) + " -ml-2 hover:no-underline"}
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to tickets
+        </AppLink>
       </div>
 
       {isLoading && (
@@ -101,60 +121,92 @@ export default function TicketDetailPage() {
       )}
 
       {error && (
-        <p className="text-destructive">
-          {axios.isAxiosError(error)
-            ? (error.response?.data?.error ?? error.message)
-            : "Failed to load ticket"}
-        </p>
+        <p className="text-destructive">{errorMessage(error, "Failed to load ticket")}</p>
       )}
 
       {ticket && (
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold mb-2">{ticket.subject}</h1>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <span>
+        <div className="flex gap-8 items-start">
+          {/* Left column — ticket content */}
+          <div className="flex-1 min-w-0 space-y-4">
+            <div>
+              <h1 className="text-2xl font-semibold mb-1">{ticket.subject}</h1>
+              <p className="text-sm text-muted-foreground">
                 From <span className="text-foreground font-medium">{ticket.fromName}</span>{" "}
-                &lt;{ticket.fromEmail}&gt;
-              </span>
-              <span>·</span>
-              <span>{new Date(ticket.createdAt).toLocaleString()}</span>
-              <span>·</span>
-              <Badge variant={statusVariant[ticket.status]}>{ticket.status}</Badge>
-              <span className="text-muted-foreground">{categoryLabel[ticket.category]}</span>
+                &lt;{ticket.fromEmail}&gt; · {new Date(ticket.createdAt).toLocaleString()}
+              </p>
+            </div>
+
+            <div className="rounded-md border p-4 bg-muted/40 whitespace-pre-wrap text-sm leading-relaxed">
+              {ticket.body}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Assigned to</span>
-            <Select
-              value={ticket.assignedTo?.id ?? "unassigned"}
-              onValueChange={handleAssignChange}
-              disabled={assignMutation.isPending}
-            >
-              <SelectTrigger className="w-48 h-8 text-sm">
-                <SelectValue>{ticket.assignedTo?.name ?? "Unassigned"}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {agents.map((agent) => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {assignMutation.isError && (
-              <span className="text-sm text-destructive">
-                {axios.isAxiosError(assignMutation.error)
-                  ? (assignMutation.error.response?.data?.error ?? assignMutation.error.message)
-                  : "Failed to assign"}
-              </span>
-            )}
-          </div>
+          {/* Right column — controls */}
+          <div className="w-52 shrink-0 space-y-5 pt-1">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</p>
+              <Select
+                value={ticket.status}
+                onValueChange={(v) => updateMutation.mutate({ status: v as TicketStatus })}
+                disabled={updateMutation.isPending}
+              >
+                <SelectTrigger className="w-full h-8 text-sm" aria-label="Status">
+                  <SelectValue>{statusLabel[ticket.status]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {updateMutation.isError && (
+                <p className="text-xs text-destructive">
+                  {errorMessage(updateMutation.error, "Failed to update")}
+                </p>
+              )}
+            </div>
 
-          <div className="rounded-md border p-4 bg-muted/40 whitespace-pre-wrap text-sm leading-relaxed">
-            {ticket.body}
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Category</p>
+              <Select
+                value={ticket.category}
+                onValueChange={(v) => updateMutation.mutate({ category: v as TicketCategory })}
+                disabled={updateMutation.isPending}
+              >
+                <SelectTrigger className="w-full h-8 text-sm" aria-label="Category">
+                  <SelectValue>{categoryLabel[ticket.category]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assigned to</p>
+              <Select
+                value={ticket.assignedTo?.id ?? "unassigned"}
+                onValueChange={(v) => assignMutation.mutate(v === "unassigned" ? null : v)}
+                disabled={assignMutation.isPending}
+              >
+                <SelectTrigger className="w-full h-8 text-sm" aria-label="Assigned to">
+                  <SelectValue>{ticket.assignedTo?.name ?? "Unassigned"}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {assignMutation.isError && (
+                <p className="text-xs text-destructive">
+                  {errorMessage(assignMutation.error, "Failed to assign")}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}

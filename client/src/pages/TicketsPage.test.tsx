@@ -66,8 +66,8 @@ describe("TicketsPage", () => {
     renderPage();
 
     await waitFor(() => screen.getByText("Cannot access my account"));
-    expect(screen.getByText(TicketStatus.Open)).toBeInTheDocument();
-    expect(screen.getByText(TicketStatus.Resolved)).toBeInTheDocument();
+    expect(screen.getByText("Open")).toBeInTheDocument();
+    expect(screen.getByText("Resolved")).toBeInTheDocument();
     expect(screen.getByText("Technical Issue")).toBeInTheDocument();
     expect(screen.getByText("Refund Request")).toBeInTheDocument();
   });

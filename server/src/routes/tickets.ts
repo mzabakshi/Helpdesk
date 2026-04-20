@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import prisma from "../db";
 import { requireAuth } from "../middleware/requireAuth";
-import { assignTicketSchema } from "core";
+import { assignTicketSchema, updateTicketSchema } from "core";
 
 const router = Router();
 router.use(requireAuth);
@@ -13,7 +13,7 @@ const querySchema = z.object({
   sortBy: z.enum(sortableFields).default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
   status: z.enum(["open", "resolved", "closed"]).optional(),
-  category: z.enum(["general_question", "technical_issue", "refund_request"]).optional(),
+  category: z.enum(["none", "general_question", "technical_issue", "refund_request"]).optional(),
   search: z.string().trim().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(10),
@@ -80,6 +80,29 @@ router.get("/:id", async (req, res) => {
   }
 
   res.json(ticket);
+});
+
+// PATCH /api/tickets/:id
+router.patch("/:id", async (req, res) => {
+  const parsed = updateTicketSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const updated = await prisma.ticket.update({
+    where: { id: req.params.id },
+    data: parsed.data,
+    include: { assignedTo: { select: { id: true, name: true } } },
+  });
+
+  res.json(updated);
 });
 
 // PATCH /api/tickets/:id/assign

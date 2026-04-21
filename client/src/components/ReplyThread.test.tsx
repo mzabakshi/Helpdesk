@@ -131,6 +131,105 @@ describe("ReplyThread", () => {
     );
   });
 
+  describe("Polish button", () => {
+    it("renders the Polish button", async () => {
+      mockGet();
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      expect(screen.getByRole("button", { name: /polish/i })).toBeInTheDocument();
+    });
+
+    it("is disabled when the textarea is empty", async () => {
+      mockGet();
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      expect(screen.getByRole("button", { name: /polish/i })).toBeDisabled();
+    });
+
+    it("is enabled when the textarea has text", async () => {
+      mockGet();
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Reply body" }), "hello");
+
+      expect(screen.getByRole("button", { name: /polish/i })).toBeEnabled();
+    });
+
+    it("calls the polish-reply endpoint and updates the textarea on success", async () => {
+      mockGet();
+      mockedAxios.post = vi.fn().mockResolvedValue({ data: { body: "Dear Jane, polished text.\n\nBest regards,\nAgent" } });
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Reply body" }), "hello");
+      await userEvent.click(screen.getByRole("button", { name: /polish/i }));
+
+      await waitFor(() =>
+        expect(mockedAxios.post).toHaveBeenCalledWith(
+          `/api/tickets/${TICKET_ID}/polish-reply`,
+          { body: "hello" },
+          expect.any(Object)
+        )
+      );
+
+      await waitFor(() =>
+        expect(screen.getByRole("textbox", { name: "Reply body" })).toHaveValue(
+          "Dear Jane, polished text.\n\nBest regards,\nAgent"
+        )
+      );
+    });
+
+    it("shows 'Polishing…' and disables the button while pending", async () => {
+      mockGet();
+      mockedAxios.post = vi.fn(() => new Promise(() => {}));
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Reply body" }), "hello");
+      await userEvent.click(screen.getByRole("button", { name: /polish/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /polishing/i })).toBeDisabled()
+      );
+    });
+
+    it("also disables Send reply while polishing", async () => {
+      mockGet();
+      mockedAxios.post = vi.fn(() => new Promise(() => {}));
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Reply body" }), "hello");
+      await userEvent.click(screen.getByRole("button", { name: /polish/i }));
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Send reply" })).toBeDisabled()
+      );
+    });
+
+    it("shows an error when the polish request fails", async () => {
+      mockGet();
+      const err = Object.assign(new Error("AI error"), {
+        isAxiosError: true,
+        response: { data: { error: "Failed to polish reply" } },
+      });
+      mockedAxios.post = vi.fn().mockRejectedValue(err);
+      vi.spyOn(axios, "isAxiosError").mockReturnValue(true as never);
+      renderComponent();
+
+      await waitFor(() => screen.getByRole("textbox", { name: "Reply body" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Reply body" }), "hello");
+      await userEvent.click(screen.getByRole("button", { name: /polish/i }));
+
+      await waitFor(() =>
+        expect(screen.getByText("Failed to polish reply")).toBeInTheDocument()
+      );
+    });
+  });
+
   it("shows an error when the reply submission fails", async () => {
     mockGet();
     const err = Object.assign(new Error("Server error"), {

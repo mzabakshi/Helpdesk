@@ -3,6 +3,8 @@ import { z } from "zod";
 import prisma from "../db";
 import { requireAuth } from "../middleware/requireAuth";
 import { assignTicketSchema, updateTicketSchema, createReplySchema, SenderType } from "core";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
 
 const router = Router();
 router.use(requireAuth);
@@ -194,6 +196,42 @@ router.post("/:id/replies", async (req, res) => {
   });
 
   res.status(201).json(reply);
+});
+
+// POST /api/tickets/:id/polish-reply
+router.post("/:id/polish-reply", async (req, res) => {
+  const parsed = z.object({ body: z.string().min(1) }).safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "body is required" });
+    return;
+  }
+
+  try {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { fromName: true },
+    });
+
+    const customerName = ticket?.fromName ?? "there";
+    const agentName = req.session!.user.name;
+
+    const { text } = await generateText({
+      model: openai("gpt-4.1-nano"),
+      messages: [
+        {
+          role: "system",
+          content:
+            `You are a helpful assistant that polishes customer support replies. Improve the grammar, tone, and clarity of the agent's reply. Keep the meaning and intent intact. Start the reply with "Dear ${customerName}," on its own line. Do not add a sign-off or signature — that will be added separately. Return only the improved reply text with no extra commentary.`,
+        },
+        { role: "user", content: parsed.data.body },
+      ],
+    });
+
+    res.json({ body: `${text}\n\nBest regards,\n${agentName}` });
+  } catch (err) {
+    console.error("Polish reply error:", err);
+    res.status(500).json({ error: "Failed to polish reply" });
+  }
 });
 
 export default router;

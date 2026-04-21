@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Sparkles } from "lucide-react";
 
 interface Reply {
   id: string;
@@ -29,6 +30,7 @@ function errorMessage(err: unknown, fallback: string) {
 export default function ReplyThread({ ticketId, customerName }: ReplyThreadProps) {
   const queryClient = useQueryClient();
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [polishError, setPolishError] = useState<string | null>(null);
 
   const { data: replies = [] } = useQuery<Reply[]>({
     queryKey: ["replies", ticketId],
@@ -44,8 +46,31 @@ export default function ReplyThread({ ticketId, customerName }: ReplyThreadProps
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateReplyInput>({ resolver: zodResolver(createReplySchema) });
+
+  const replyBody = watch("body");
+
+  const polishMutation = useMutation({
+    mutationFn: async (body: string) => {
+      const { data } = await axios.post<{ body: string }>(
+        `/api/tickets/${ticketId}/polish-reply`,
+        { body },
+        { withCredentials: true }
+      );
+      return data.body;
+    },
+    onSuccess: (polished) => {
+      setValue("body", polished, { shouldValidate: true });
+      setPolishError(null);
+    },
+    onError: (err) => {
+      setPolishError(errorMessage(err, "Failed to polish reply"));
+    },
+  });
 
   const replyMutation = useMutation({
     mutationFn: (data: CreateReplyInput) =>
@@ -110,9 +135,27 @@ export default function ReplyThread({ ticketId, customerName }: ReplyThreadProps
         {replyError && (
           <p className="text-xs text-destructive">{replyError}</p>
         )}
-        <Button type="submit" size="sm" disabled={replyMutation.isPending}>
-          {replyMutation.isPending ? "Sending…" : "Send reply"}
-        </Button>
+        {polishError && (
+          <p className="text-xs text-destructive">{polishError}</p>
+        )}
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={polishMutation.isPending || replyMutation.isPending || !replyBody?.trim()}
+            onClick={() => {
+              const body = getValues("body");
+              if (body?.trim()) polishMutation.mutate(body);
+            }}
+          >
+            <Sparkles className="mr-1 h-3.5 w-3.5" />
+            {polishMutation.isPending ? "Polishing…" : "Polish"}
+          </Button>
+          <Button type="submit" size="sm" disabled={replyMutation.isPending || polishMutation.isPending}>
+            {replyMutation.isPending ? "Sending…" : "Send reply"}
+          </Button>
+        </div>
       </form>
     </div>
   );

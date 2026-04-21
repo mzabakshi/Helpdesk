@@ -124,10 +124,16 @@ router.delete("/:id", async (req, res) => {
     res.status(403).json({ error: "Admin users cannot be deleted." });
     return;
   }
-  await prisma.user.update({
-    where: { id: req.params.id },
-    data: { deletedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.ticket.updateMany({
+      where: { assignedToId: req.params.id },
+      data: { assignedToId: null },
+    }),
+    prisma.user.update({
+      where: { id: req.params.id },
+      data: { deletedAt: new Date() },
+    }),
+  ]);
   res.status(204).send();
 });
 

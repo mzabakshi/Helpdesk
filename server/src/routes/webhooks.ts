@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import prisma from "../db";
+import { classifyTicket } from "../lib/classifyTicket";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -21,7 +22,7 @@ router.post("/inbound", upload.any(), async (req, res) => {
   const fromName = match ? match[1].trim() || "Unknown" : (from ?? "Unknown");
   const fromEmail = match ? match[2].trim() : (from ?? "");
 
-  await prisma.ticket.create({
+  const ticket = await prisma.ticket.create({
     data: {
       subject: subject?.trim() || "(no subject)",
       body: text ?? "",
@@ -29,6 +30,11 @@ router.post("/inbound", upload.any(), async (req, res) => {
       fromName,
     },
   });
+
+  // Classify in the background — do not await so the webhook returns immediately
+  classifyTicket(ticket).catch((err) =>
+    console.error(`classifyTicket failed for ticket ${ticket.id}:`, err)
+  );
 
   res.status(200).send();
 });

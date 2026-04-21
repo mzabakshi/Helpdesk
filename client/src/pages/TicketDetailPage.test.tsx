@@ -35,6 +35,7 @@ const TICKET = {
 function mockGet(ticket = TICKET, agents = AGENTS) {
   mockedAxios.get = vi.fn().mockImplementation((url: string) => {
     if (url.includes("/api/agents")) return Promise.resolve({ data: agents });
+    if (url.includes("/replies")) return Promise.resolve({ data: [] });
     return Promise.resolve({ data: ticket });
   });
 }
@@ -281,4 +282,5 @@ describe("TicketDetailPage", () => {
       expect(screen.getByText("Agent not found")).toBeInTheDocument()
     );
   });
+
 });

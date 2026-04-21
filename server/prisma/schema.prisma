@@ -26,6 +26,7 @@ model User {
   sessions        Session[]
   accounts        Account[]
   assignedTickets Ticket[]
+  replies         Reply[]
 
   @@map("user")
 }
@@ -99,6 +100,25 @@ model Ticket {
   assignedTo   User?          @relation(fields: [assignedToId], references: [id])
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  replies      Reply[]
 
   @@map("ticket")
+}
+
+enum SenderType {
+  agent
+  customer
+}
+
+model Reply {
+  id         String     @id @default(cuid())
+  body       String
+  senderType SenderType
+  ticketId   String
+  ticket     Ticket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id])
+  createdAt  DateTime   @default(now())
+
+  @@map("reply")
 }

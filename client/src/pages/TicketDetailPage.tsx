@@ -3,6 +3,7 @@ import AppLink from "@/components/AppLink";
 import ReplyThread from "@/components/ReplyThread";
 import TicketInfo from "@/components/TicketInfo";
 import UpdateTicket from "@/components/UpdateTicket";
+import TicketSummary from "@/components/TicketSummary";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { TicketStatus, TicketCategory } from "core";
@@ -82,6 +83,8 @@ export default function TicketDetailPage() {
               createdAt={ticket.createdAt}
               body={ticket.body}
             />
+
+            <TicketSummary ticketId={ticket.id} />
 
             <ReplyThread ticketId={ticket.id} customerName={ticket.fromName} />
           </div>

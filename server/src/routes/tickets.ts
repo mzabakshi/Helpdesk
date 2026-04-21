@@ -234,4 +234,60 @@ router.post("/:id/polish-reply", async (req, res) => {
   }
 });
 
+// POST /api/tickets/:id/summarize
+router.post("/:id/summarize", async (req, res) => {
+  try {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { subject: true, body: true, fromName: true },
+    });
+
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found" });
+      return;
+    }
+
+    const replies = await prisma.reply.findMany({
+      where: { ticketId: req.params.id },
+      select: {
+        body: true,
+        senderType: true,
+        author: { select: { name: true } },
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const conversationLines = replies.map((r) => {
+      const sender = r.senderType === "agent" ? (r.author?.name ?? "Agent") : ticket.fromName;
+      return `${sender}: ${r.body}`;
+    });
+
+    const conversationText =
+      conversationLines.length > 0
+        ? `\n\nConversation:\n${conversationLines.join("\n\n")}`
+        : "";
+
+    const { text } = await generateText({
+      model: openai("gpt-4.1-nano"),
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a support ticket summarizer. Given a customer support ticket and its conversation history, produce a concise summary (3–5 sentences) covering: the customer's issue, any troubleshooting steps taken, the current status, and any outstanding action items. Be factual and neutral.",
+        },
+        {
+          role: "user",
+          content: `Subject: ${ticket.subject}\nFrom: ${ticket.fromName}\n\nOriginal message:\n${ticket.body}${conversationText}`,
+        },
+      ],
+    });
+
+    res.json({ summary: text });
+  } catch (err) {
+    console.error("Summarize error:", err);
+    res.status(500).json({ error: "Failed to summarize ticket" });
+  }
+});
+
 export default router;

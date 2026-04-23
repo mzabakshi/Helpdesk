@@ -10,6 +10,8 @@ import webhooksRouter from "./routes/webhooks";
 import ticketsRouter from "./routes/tickets";
 import agentsRouter from "./routes/agents";
 import prisma from "./db";
+import boss from "./boss";
+import { startWorkers } from "./workers";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,6 +64,8 @@ if (process.env.NODE_ENV !== "production") {
     res.json(ticket ?? null);
   });
 }
+
+boss.start().then(() => startWorkers()).catch(console.error);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

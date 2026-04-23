@@ -1,7 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
 import prisma from "../db";
-import { classifyTicket } from "../lib/classifyTicket";
+import boss from "../boss";
+import { CLASSIFY_TICKET_QUEUE } from "../workers";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -31,10 +32,12 @@ router.post("/inbound", upload.any(), async (req, res) => {
     },
   });
 
-  // Classify in the background — do not await so the webhook returns immediately
-  classifyTicket(ticket).catch((err) =>
-    console.error(`classifyTicket failed for ticket ${ticket.id}:`, err)
-  );
+  // Enqueue classification — pg-boss handles retries and persistence
+  await boss.send(CLASSIFY_TICKET_QUEUE, {
+    id: ticket.id,
+    subject: ticket.subject,
+    body: ticket.body,
+  });
 
   res.status(200).send();
 });

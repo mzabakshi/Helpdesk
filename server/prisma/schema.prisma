@@ -76,6 +76,8 @@ model Verification {
 }
 
 enum TicketStatus {
+  new
+  processing
   open
   resolved
   closed
@@ -94,7 +96,7 @@ model Ticket {
   body         String
   fromEmail    String
   fromName     String
-  status       TicketStatus   @default(open)
+  status       TicketStatus   @default(new)
   category     TicketCategory @default(general_question)
   assignedToId String?
   assignedTo   User?          @relation(fields: [assignedToId], references: [id])
@@ -108,6 +110,7 @@ model Ticket {
 enum SenderType {
   agent
   customer
+  ai
 }
 
 model Reply {

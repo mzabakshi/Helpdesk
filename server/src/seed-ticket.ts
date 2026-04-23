@@ -1,6 +1,6 @@
 import "dotenv/config";
 import prisma from "./db";
-import { SenderType } from "./generated/prisma/enums";
+import { SenderType, TicketStatus } from "./generated/prisma/enums";
 
 // Find the first agent user to use as reply author
 const agent = await prisma.user.findFirst({
@@ -13,9 +13,20 @@ if (!agent) {
   process.exit(1);
 }
 
+const existing = await prisma.ticket.findFirst({
+  where: { subject: "Cannot access my account after password reset" },
+});
+
+if (existing) {
+  console.log("Tickets already seeded, skipping.");
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
 const ticket = await prisma.ticket.create({
   data: {
     subject: "Cannot access my account after password reset",
+    status: TicketStatus.open,
     body: `Hi support team,
 
 I recently requested a password reset for my account (user ID: 84920) and received the reset email, but after following the link and setting a new password I'm still unable to log in. The error message says "Invalid credentials" even though I'm certain the new password is correct.

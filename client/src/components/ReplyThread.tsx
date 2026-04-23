@@ -94,17 +94,21 @@ export default function ReplyThread({ ticketId, customerName }: ReplyThreadProps
           </h2>
           {replies.map((reply) => {
             const isAgent = reply.senderType === SenderType.Agent;
-            const senderName = isAgent ? (reply.author?.name ?? "Agent") : customerName;
+            const isAi = reply.senderType === SenderType.Ai;
+            const senderName = isAgent
+              ? (reply.author?.name ?? "Agent")
+              : isAi
+              ? "AI Assistant"
+              : customerName;
+            const label = isAgent ? "agent" : isAi ? "ai" : "customer";
             return (
               <div
                 key={reply.id}
-                className={`rounded-md border p-4 space-y-1 ${isAgent ? "bg-muted/40" : ""}`}
+                className={`rounded-md border p-4 space-y-1 ${isAgent || isAi ? "bg-muted/40" : ""}`}
               >
                 <p className="text-xs text-muted-foreground">
                   <span className="text-foreground font-medium">{senderName}</span>
-                  <span className="ml-1 text-muted-foreground/70">
-                    ({isAgent ? "agent" : "customer"})
-                  </span>
+                  <span className="ml-1 text-muted-foreground/70">({label})</span>
                   {" · "}
                   {new Date(reply.createdAt).toLocaleString()}
                 </p>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import prisma from "../db";
 import { requireAuth } from "../middleware/requireAuth";
 import { assignTicketSchema, updateTicketSchema, createReplySchema, SenderType } from "core";
+import { TicketStatus } from "../generated/prisma/enums";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -34,7 +35,7 @@ router.get("/", async (req, res) => {
   });
 
   const where = {
-    ...(status && { status }),
+    status: status ? status : { notIn: [TicketStatus.new, TicketStatus.processing] },
     ...(category && { category }),
     ...(search && {
       OR: [
@@ -165,6 +166,26 @@ router.get("/:id/replies", async (req, res) => {
   res.json(replies);
 });
 
+async function formatReply(body: string, customerName: string): Promise<string> {
+  const firstName = customerName.split(" ")[0] || customerName;
+  const { text } = await generateText({
+    model: openai("gpt-4.1-nano"),
+    messages: [
+      {
+        role: "system",
+        content: `You are a customer support writing assistant. Rewrite the agent's reply so that it:
+- Starts with "Dear ${firstName}," on its own line
+- Has a professional, warm, and customer-friendly tone
+- Is clearly and concisely written with proper formatting
+- Ends with the exact sign-off: "Helpdesk Support" on its own line after "Best regards,"
+- Returns only the formatted reply — no extra commentary`,
+      },
+      { role: "user", content: body },
+    ],
+  });
+  return text;
+}
+
 // POST /api/tickets/:id/replies
 router.post("/:id/replies", async (req, res) => {
   const parsed = createReplySchema.safeParse(req.body);
@@ -173,15 +194,20 @@ router.post("/:id/replies", async (req, res) => {
     return;
   }
 
-  const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: req.params.id },
+    select: { fromName: true },
+  });
   if (!ticket) {
     res.status(404).json({ error: "Ticket not found" });
     return;
   }
 
+  const formattedBody = await formatReply(parsed.data.body, ticket.fromName);
+
   const reply = await prisma.reply.create({
     data: {
-      body: parsed.data.body,
+      body: formattedBody,
       senderType: SenderType.Agent,
       ticketId: req.params.id,
       authorId: req.session!.user.id,
@@ -212,22 +238,8 @@ router.post("/:id/polish-reply", async (req, res) => {
       select: { fromName: true },
     });
 
-    const customerName = ticket?.fromName ?? "there";
-    const agentName = req.session!.user.name;
-
-    const { text } = await generateText({
-      model: openai("gpt-4.1-nano"),
-      messages: [
-        {
-          role: "system",
-          content:
-            `You are a helpful assistant that polishes customer support replies. Improve the grammar, tone, and clarity of the agent's reply. Keep the meaning and intent intact. Start the reply with "Dear ${customerName}," on its own line. Do not add a sign-off or signature — that will be added separately. Return only the improved reply text with no extra commentary.`,
-        },
-        { role: "user", content: parsed.data.body },
-      ],
-    });
-
-    res.json({ body: `${text}\n\nBest regards,\n${agentName}` });
+    const formattedBody = await formatReply(parsed.data.body, ticket?.fromName ?? "Customer");
+    res.json({ body: formattedBody });
   } catch (err) {
     console.error("Polish reply error:", err);
     res.status(500).json({ error: "Failed to polish reply" });

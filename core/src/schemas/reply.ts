@@ -3,6 +3,7 @@ import { z } from "zod";
 export enum SenderType {
   Agent = "agent",
   Customer = "customer",
+  Ai = "ai",
 }
 
 export const createReplySchema = z.object({

@@ -2,7 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import prisma from "../db";
 import boss from "../boss";
-import { CLASSIFY_TICKET_QUEUE } from "../workers";
+import { CLASSIFY_TICKET_QUEUE, AUTO_RESOLVE_TICKET_QUEUE } from "../workers";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -32,12 +32,20 @@ router.post("/inbound", upload.any(), async (req, res) => {
     },
   });
 
-  // Enqueue classification — pg-boss handles retries and persistence
-  await boss.send(CLASSIFY_TICKET_QUEUE, {
-    id: ticket.id,
-    subject: ticket.subject,
-    body: ticket.body,
-  });
+  // Enqueue classification and auto-resolve — pg-boss handles retries and persistence
+  await Promise.all([
+    boss.send(CLASSIFY_TICKET_QUEUE, {
+      id: ticket.id,
+      subject: ticket.subject,
+      body: ticket.body,
+    }),
+    boss.send(AUTO_RESOLVE_TICKET_QUEUE, {
+      id: ticket.id,
+      subject: ticket.subject,
+      body: ticket.body,
+      fromName: ticket.fromName,
+    }),
+  ]);
 
   res.status(200).send();
 });

@@ -9,6 +9,7 @@ import usersRouter from "./routes/users";
 import webhooksRouter from "./routes/webhooks";
 import ticketsRouter from "./routes/tickets";
 import agentsRouter from "./routes/agents";
+import statsRouter from "./routes/stats";
 import prisma from "./db";
 import boss from "./boss";
 import { startWorkers } from "./workers";
@@ -47,6 +48,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api/stats", statsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/agents", agentsRouter);
 app.use("/api/tickets", ticketsRouter);

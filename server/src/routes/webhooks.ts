@@ -32,6 +32,18 @@ router.post("/inbound", upload.any(), async (req, res) => {
     },
   });
 
+  // Assign to AI agent if one is configured
+  const aiAgentEmail = process.env.SEED_AI_AGENT_EMAIL;
+  if (aiAgentEmail) {
+    const aiAgent = await prisma.user.findUnique({ where: { email: aiAgentEmail } });
+    if (aiAgent) {
+      await prisma.ticket.update({
+        where: { id: ticket.id },
+        data: { assignedToId: aiAgent.id },
+      });
+    }
+  }
+
   // Enqueue classification and auto-resolve — pg-boss handles retries and persistence
   await Promise.all([
     boss.send(CLASSIFY_TICKET_QUEUE, {

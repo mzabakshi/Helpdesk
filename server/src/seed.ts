@@ -74,4 +74,23 @@ if (!existingAgent) {
   console.log(`Agent user created: ${agentEmail}`);
 }
 
+// Seed the AI agent — used to assign tickets during auto-resolution
+const aiAgentEmail = process.env.SEED_AI_AGENT_EMAIL;
+if (aiAgentEmail) {
+  await prisma.user.upsert({
+    where: { email: aiAgentEmail },
+    update: {},
+    create: {
+      id: generateId(),
+      name: "AI",
+      email: aiAgentEmail,
+      emailVerified: true,
+      role: Role.agent,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  console.log(`AI agent seeded: ${aiAgentEmail}`);
+}
+
 await prisma.$disconnect();

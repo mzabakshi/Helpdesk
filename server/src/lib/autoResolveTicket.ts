@@ -47,7 +47,7 @@ Rules:
   }));
   } catch (err) {
     console.error(`autoResolveTicket: generateText failed for ticket ${ticket.id}:`, err);
-    await prisma.ticket.update({ where: { id: ticket.id }, data: { status: "open" } });
+    await prisma.ticket.update({ where: { id: ticket.id }, data: { status: "open", assignedToId: null } });
     return;
   }
 
@@ -56,7 +56,7 @@ Rules:
     parsed = JSON.parse(text.trim());
   } catch {
     console.warn(`autoResolveTicket: invalid JSON response for ticket ${ticket.id}:`, text);
-    await prisma.ticket.update({ where: { id: ticket.id }, data: { status: "open" } });
+    await prisma.ticket.update({ where: { id: ticket.id }, data: { status: "open", assignedToId: null } });
     return;
   }
 
@@ -78,7 +78,7 @@ Rules:
   } else {
     await prisma.ticket.update({
       where: { id: ticket.id },
-      data: { status: "open" },
+      data: { status: "open", assignedToId: null },
     });
   }
 }

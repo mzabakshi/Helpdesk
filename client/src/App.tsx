@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router";
 import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/HomePage";
+import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
 import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
@@ -12,7 +12,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<DashboardPage />} />
         <Route path="/tickets" element={<TicketsPage />} />
         <Route path="/tickets/:id" element={<TicketDetailPage />} />
       </Route>

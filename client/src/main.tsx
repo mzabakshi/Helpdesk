@@ -1,5 +1,14 @@
+import * as Sentry from "@sentry/react";
 import "./index.css";
 import { StrictMode } from "react";
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
+  integrations: [Sentry.browserTracingIntegration()],
+  tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
+  tracePropagationTargets: ["localhost", /^\/api/],
+});
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

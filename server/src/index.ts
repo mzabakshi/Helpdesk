@@ -1,4 +1,6 @@
+import "./instrument"; // must be first
 import "dotenv/config";
+import * as Sentry from "@sentry/node";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -66,6 +68,9 @@ if (process.env.NODE_ENV !== "production") {
     res.json(ticket ?? null);
   });
 }
+
+// Must be registered after all routes, before other error middleware
+Sentry.setupExpressErrorHandler(app);
 
 boss.start().then(() => startWorkers()).catch(console.error);
 

@@ -5,6 +5,11 @@
       "source": "better-auth/skills",
       "sourceType": "github",
       "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
+    },
+    "frontend-design": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "68950c001f80b99a7a19e9d71b9323925e8f947e0473cc0adb19456ebbdfba25"
     }
   }
 }

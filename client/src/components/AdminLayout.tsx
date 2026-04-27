@@ -1,15 +1,15 @@
 import { Navigate, Outlet } from "react-router";
 import { Role } from "core";
 import { authClient } from "../lib/auth-client";
-import NavBar from "./NavBar";
+import Sidebar from "./Sidebar";
 
 export default function AdminLayout() {
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="text-gray-500 text-sm">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span className="text-muted-foreground text-sm">Loading…</span>
       </div>
     );
   }
@@ -23,9 +23,9 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NavBar />
-      <main className="p-6">
+    <div className="min-h-screen flex bg-background">
+      <Sidebar />
+      <main className="flex-1 ml-60 min-h-screen overflow-auto">
         <Outlet />
       </main>
     </div>

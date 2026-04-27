@@ -29,8 +29,6 @@ COPY --from=builder /app/server/src/generated ./server/src/generated
 
 # Copy built client into server/public so Express can serve it
 COPY --from=builder /app/client/dist ./server/public
-# Copy generated Prisma client from builder (avoids running generate again)
-COPY --from=builder /app/server/src/generated ./server/src/generated
 
 WORKDIR /app/server
 

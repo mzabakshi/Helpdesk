@@ -25,6 +25,7 @@ RUN bun install --frozen-lockfile
 
 COPY core ./core
 COPY server ./server
+COPY --from=builder /app/server/src/generated ./server/src/generated
 
 # Copy built client into server/public so Express can serve it
 COPY --from=builder /app/client/dist ./server/public

@@ -8,8 +8,9 @@ COPY client/package.json ./client/
 COPY server/package.json ./server/
 RUN bun install --frozen-lockfile
 
-# Copy source and build client
+# Copy source, generate Prisma client, and build client
 COPY . .
+RUN cd server && bunx prisma generate
 RUN cd client && bun run build
 
 # Production image

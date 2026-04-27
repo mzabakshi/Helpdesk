@@ -19,7 +19,18 @@ const AGENTS = [
   { id: "agent-2", name: "Bob" },
 ];
 
-const TICKET = {
+const TICKET: {
+  id: string;
+  subject: string;
+  body: string;
+  fromName: string;
+  fromEmail: string;
+  status: TicketStatus;
+  category: TicketCategory;
+  assignedTo: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+} = {
   id: "ticket-1",
   subject: "Cannot login",
   body: "I have been unable to log in for two days.",

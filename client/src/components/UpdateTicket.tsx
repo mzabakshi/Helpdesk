@@ -35,6 +35,8 @@ const categoryOptions: { label: string; value: TicketCategory }[] = [
 ];
 
 const statusLabel: Record<TicketStatus, string> = {
+  [TicketStatus.New]: "New",
+  [TicketStatus.Processing]: "Processing",
   [TicketStatus.Open]: "Open",
   [TicketStatus.Resolved]: "Resolved",
   [TicketStatus.Closed]: "Closed",

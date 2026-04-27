@@ -1,3 +1,6 @@
+-- Ensure 'ai' enum value exists before functions that reference it
+ALTER TYPE "SenderType" ADD VALUE IF NOT EXISTS 'ai';
+
 -- Function: get_dashboard_stats()
 -- Returns scalar ticket metrics for the dashboard.
 CREATE OR REPLACE FUNCTION get_dashboard_stats()

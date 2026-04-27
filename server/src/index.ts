@@ -15,6 +15,7 @@ import statsRouter from "./routes/stats";
 import prisma from "./db";
 import boss from "./boss";
 import { startWorkers } from "./workers";
+import path from "path";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,6 +67,15 @@ if (process.env.NODE_ENV !== "production") {
       orderBy: { createdAt: "desc" },
     });
     res.json(ticket ?? null);
+  });
+}
+
+// Serve React SPA static files in production
+if (process.env.NODE_ENV === "production") {
+  const staticDir = path.join(import.meta.dir, "../public");
+  app.use(express.static(staticDir));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(staticDir, "index.html"));
   });
 }
 

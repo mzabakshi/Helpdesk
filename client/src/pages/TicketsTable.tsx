@@ -37,12 +37,16 @@ interface Props {
 }
 
 const statusVariant: Record<TicketStatus, "default" | "secondary" | "outline"> = {
+  [TicketStatus.New]: "default",
+  [TicketStatus.Processing]: "default",
   [TicketStatus.Open]: "default",
   [TicketStatus.Resolved]: "secondary",
   [TicketStatus.Closed]: "outline",
 };
 
 const statusLabel: Record<TicketStatus, string> = {
+  [TicketStatus.New]: "New",
+  [TicketStatus.Processing]: "Processing",
   [TicketStatus.Open]: "Open",
   [TicketStatus.Resolved]: "Resolved",
   [TicketStatus.Closed]: "Closed",
